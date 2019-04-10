@@ -296,9 +296,9 @@ fprintf('Done. Showing results, now..\n');
 SomePlots(Xreal_History,Xe_History,XeDR_History,NavigationMap) ;
 figure(1); clf; hold on; grid on;
 t=linspace(0,4999,5000);
-t0=ones(1,5000);
+t0=zeros(1,5000);
 plot(t, Xe_History(4,:),'b');
-plot(t, t0);
+plot(t, t0, 'r');
 hold off;
 
 return ;        
@@ -367,10 +367,10 @@ return ;
 
 function InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,sdev_angleMeasurement, DtObservations)
     global ContextSimulation;
-    ContextSimulation.Xreal = [ 0; 0;pi/2; 0 ] ;     % [x;y;phi;bias]
+    ContextSimulation.Xreal = [ 0; 0;pi/2; 1] ;     % [x;y;phi;bias]
     ContextSimulation.stdDevSpeed = stdDevSpeed;
     ContextSimulation.stdDevGyro = stdDevGyro;
-    ContextSimulation.Xreal = [0;0;pi/2;0];
+    ContextSimulation.Xreal = [0;0;pi/2;-1];
     ContextSimulation.speed=0;
     ContextSimulation.GyroZ=0;
     ContextSimulation.sdev_rangeMeasurement=sdev_rangeMeasurement;
