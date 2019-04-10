@@ -245,12 +245,12 @@ for i=1:Li,     % loop
         
             % Some intermediate steps for the EKF (as presented in the lecture notes)
             S = R + H*P*H' ;
-            iS = inv(S)%iS=1/S;                 % iS = inv(S) ;   % in this case S is 1x1 so inv(S) is just 1/S
+            iS = inv(S);%iS=1/S;                 % iS = inv(S) ;   % in this case S is 1x1 so inv(S) is just 1/S
             K = P*H'*iS ;           % Kalman gain
             % ----- finally, we do it...We obtain  X(k+1|k+1) and P(k+1|k+1)
             
             Xe = Xe+K*z ;       % update the  expected value
-            P = P-P*H'*iS*H*P%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
+            P = P-P*H'*iS*H*P;%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
             % -----  individual EKF update done ...
         
             % Loop to the next observation based on available measurements..
