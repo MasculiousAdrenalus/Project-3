@@ -67,7 +67,7 @@
 
 function main()
 
-
+gBias = -0.97 *pi/180;
 % .....................................................
 % Here I define the magnitude of the "noises", which I assume are present, 
 % polluting mesurements, models, etc.  
@@ -137,7 +137,7 @@ XeDR_History= zeros(4,Li) ;
 % Although you can use this proposed Q, it can be improved. Read
 % "MTRN4010_L06_Noise_in_the_inputs_of_ProcessModel.pdf" in order to implement a good refinement. 
 
-Q = diag( [ (0.01)^2 ,(0.01)^2 , (1*pi/180)^2], 0) ;
+Q = diag( [ (0.01)^2 ,(0.01)^2 , (1*pi/180)^2, (1*pi/180*1/3600)^2]) ;
 P_u = diag([stdDevGyro stdDevSpeed]);
 % Q matrix. Represent the covariance of the uncertainty about the process model.
 % .....................................................
@@ -254,7 +254,7 @@ for i=1:Li,     % loop
             %(measured output value - expected output value)
             %z  = MeasuredRanges(u) - ExpectedRange ;      
             z  = [[MeasuredRanges(u) - ExpectedRange];      
-	          [MeasuredAngles(u) - ExpectedAngle]]
+	          [MeasuredAngles(u) - ExpectedAngle]];
             % ------ covariance of the noise/uncetainty in the measurements
             %R = sdev_rangeMeasurement*sdev_rangeMeasurement*4 ;
             R = diag([sdev_rangeMeasurement^2*4 sdev_angleMeasurement^2*4]);
@@ -297,7 +297,7 @@ SomePlots(Xreal_History,Xe_History,XeDR_History,NavigationMap) ;
 figure(1); clf; hold on; grid on;
 t=linspace(0,4999,5000);
 t0=zeros(1,5000);
-plot(t, Xe_History(4,:),'b');
+plot(t, Xe_History(4,:)*180/pi,'b');
 plot(t, t0, 'r');
 hold off;
 
@@ -309,11 +309,11 @@ return ;
 % --- THIS IS THE PROCESS MODEL of MY SYSTEM. (it is a Kinemetic model)
     
 function Xnext=RunProcessModel(X,speed,GyroZ,dt) 
-    Xnext = zeros(4,1);
-    temp = X(4);
+%     Xnext = zeros(4,1);
+%     temp = X(4);
     Xnext = X + dt*[ speed*cos(X(3)) ;
                         speed*sin(X(3)) ; 
-                        GyroZ-temp; 
+                        GyroZ-X(4); 
                         0; ] ;
 return ;
 
@@ -367,10 +367,10 @@ return ;
 
 function InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,sdev_angleMeasurement, DtObservations)
     global ContextSimulation;
-    ContextSimulation.Xreal = [ 0; 0;pi/2; 1] ;     % [x;y;phi;bias]
+    ContextSimulation.Xreal = [ 0; 0;pi/2; 0] ;     % [x;y;phi;bias]
     ContextSimulation.stdDevSpeed = stdDevSpeed;
     ContextSimulation.stdDevGyro = stdDevGyro;
-    ContextSimulation.Xreal = [0;0;pi/2;-1];
+    ContextSimulation.Xreal = [0;0;pi/2;0];
     ContextSimulation.speed=0;
     ContextSimulation.GyroZ=0;
     ContextSimulation.sdev_rangeMeasurement=sdev_rangeMeasurement;

@@ -122,12 +122,12 @@ P = zeros(4,4) ;            % initial quality --> perfect (covariance =zero )
 P(4,4) = (4*pi/180)^2; 
 
 % These are the "opn-loop" dead reckoning ESTIMATES
-Xdr = [ 0; 0;pi/2 ] ;
+Xdr = [ 0; 0;pi/2;0 ] ;
 
 % Some buffers to store the intermediate values during the experiment (so we can plot them, later)
-Xreal_History= zeros(3,Li) ;
-Xe_History= zeros(3,Li) ;
-XeDR_History= zeros(3,Li) ;
+Xreal_History= zeros(4,Li) ;
+Xe_History= zeros(4,Li) ;
+XeDR_History= zeros(4,Li) ;
 
 % .....................................................
 % I assume that every time we apply the process model to predict the evolution of the system for a 
@@ -138,7 +138,7 @@ XeDR_History= zeros(3,Li) ;
 % "MTRN4010_L06_Noise_in_the_inputs_of_ProcessModel.pdf" in order to implement a good refinement. 
 
 Q = diag( [ (0.01)^2 ,(0.01)^2 , (1*pi/180)^2], 0) ;
-Q_u = diag([stdDevGyro stdDevSpeed]);
+P_u = diag([stdDevGyro stdDevSpeed]);
 % Q matrix. Represent the covariance of the uncertainty about the process model.
 % .....................................................
 
@@ -191,7 +191,7 @@ for i=1:Li,     % loop
         [0 Dt];
         [0 0];
         ];
-    Q_u = F_u*(Q_u)*F_u';
+    Q_u = F_u*(P_u)*F_u';
     % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
     Q1 = Dt^2*diag( [ (0.01)^2 ,...
                         (0.01)^2 ,...
@@ -254,7 +254,7 @@ for i=1:Li,     % loop
             %(measured output value - expected output value)
             %z  = MeasuredRanges(u) - ExpectedRange ;      
             z  = [[MeasuredRanges(u) - ExpectedRange];      
-	          [MeasuredAngles(u) - ExpectedAngle]]
+	          [MeasuredAngles(u) - ExpectedAngle]];
             % ------ covariance of the noise/uncetainty in the measurements
             %R = sdev_rangeMeasurement*sdev_rangeMeasurement*4 ;
             R = diag([sdev_rangeMeasurement^2*4 sdev_angleMeasurement^2*4]);
@@ -285,7 +285,7 @@ for i=1:Li,     % loop
      Xreal_History(:,i) = GetCurrentSimulatedState() ;
      Xe_History(:,i)    = Xe ;
      XeDR_History(:,i)  = Xdr ;
-
+     assignin('base','Xe_History',Xe_History);
 end ;                           % end of while loop
 
 
@@ -294,7 +294,12 @@ fprintf('Done. Showing results, now..\n');
 % now, we can see the resutls.
 % PLOT some results. 
 SomePlots(Xreal_History,Xe_History,XeDR_History,NavigationMap) ;
-
+figure(1); clf; hold on; grid on;
+t=linspace(0,4999,5000);
+t0=zeros(1,5000);
+plot(t, Xe_History(4,:)*180/pi,'b');
+plot(t, t0, 'r');
+hold off;
 
 return ;        
 
@@ -304,9 +309,11 @@ return ;
 % --- THIS IS THE PROCESS MODEL of MY SYSTEM. (it is a Kinemetic model)
     
 function Xnext=RunProcessModel(X,speed,GyroZ,dt) 
+    Xnext = zeros(4,1);
+    temp = X(4);
     Xnext = X + dt*[ speed*cos(X(3)) ;
                         speed*sin(X(3)) ; 
-                        GyroZ-X(4); 
+                        GyroZ-X(4; 
                         0; ] ;
 return ;
 
@@ -360,10 +367,10 @@ return ;
 
 function InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,sdev_angleMeasurement, DtObservations)
     global ContextSimulation;
-    ContextSimulation.Xreal = [ 0; 0;pi/2;0 ] ;     % [x;y;phi]
+    ContextSimulation.Xreal = [ 0; 0;pi/2; 0] ;     % [x;y;phi;bias]
     ContextSimulation.stdDevSpeed = stdDevSpeed;
     ContextSimulation.stdDevGyro = stdDevGyro;
-    ContextSimulation.Xreal = [0;0;pi/2];
+    ContextSimulation.Xreal = [0;0;pi/2;0];
     ContextSimulation.speed=0;
     ContextSimulation.GyroZ=0;
     ContextSimulation.sdev_rangeMeasurement=sdev_rangeMeasurement;
