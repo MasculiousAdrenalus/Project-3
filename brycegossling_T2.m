@@ -294,7 +294,12 @@ fprintf('Done. Showing results, now..\n');
 % now, we can see the resutls.
 % PLOT some results. 
 SomePlots(Xreal_History,Xe_History,XeDR_History,NavigationMap) ;
-
+figure(1); clf; hold on; grid on;
+t=linspace(0,4999,5000);
+t0=ones(1,5000);
+plot(t, Xe_History(4,:),'b');
+plot(t, t0);
+hold off;
 
 return ;        
 
