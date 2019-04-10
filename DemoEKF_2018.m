@@ -136,6 +136,7 @@ XeDR_History= zeros(3,Li) ;
 % "MTRN4010_L06_Noise_in_the_inputs_of_ProcessModel.pdf" in order to implement a good refinement. 
 
 Q = diag( [ (0.01)^2 ,(0.01)^2 , (1*pi/180)^2]) ;
+Q_u = diag([stdDevGyro stdDevSpeed]);
 % Q matrix. Represent the covariance of the uncertainty about the process model.
 % .....................................................
 
@@ -177,9 +178,9 @@ for i=1:Li,     % loop
     % First , I evaluate the Jacobian matrix of the process model (see lecture notes), at X=X(k|k).
     % You should write the analytical expression on paper to understand the following line.
     J = [ [1,0,-Dt*Noisy_speed*sin(Xe(3))  ]  ; [0,1,Dt*Noisy_speed*cos(Xe(3))] ;    [ 0,0,1 ] ] ; 
-    
+    F_u = Dt*[[Noisy_speed*cos(Xe(3)) 0]; [Noisy_speed*sin(Xe(3)) 0]; [0 1];];
     % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
-    P = J*P*J'+Q ;
+    P = J*P*J'+ (Q + F_u*Q_u*F_u') ;
     % ATTENTION: we need, in our case, to propose a consistent Q matrix (this is part of your assignment!)
         
     % And, here, we calculate the predicted expected value. 
@@ -246,7 +247,7 @@ for i=1:Li,     % loop
             % ----- finally, we do it...We obtain  X(k+1|k+1) and P(k+1|k+1)
             
             Xe = Xe+K*z ;       % update the  expected value
-            P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
+            P = P-P*H'*iS*H*P%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
             % -----  individual EKF update done ...
         
             % Loop to the next observation based on available measurements..
@@ -434,7 +435,7 @@ function SomePlots(Xreal_History,Xe_History,Xdr_History,map) ;
 figure(2) ; clf ; hold on ;
 plot(Xreal_History(1,:),Xreal_History(2,:),'b') ;
 plot(Xe_History(1,:),Xe_History(2,:),'r') ;
-plot(Xdr_History(1,:),Xdr_History(2,:),'m') ;
+plot(Xdr_History(1,:),Xdr_History(2,:),'g') ;
 if (map.nLandmarks>0),   
     plot(map.landmarks(:,1),map.landmarks(:,2),'*r') ;
     legend({'Real path','EKF Estimated path','DR Estimated path','Landmarks'});
@@ -447,11 +448,11 @@ end;
 
 
 % show vectors, for visualizing heading, at a small number of points.
-ii = [1:225:length(Xe_History(1,:))] ;
-m=10;
-quiver(Xreal_History(1,ii),Xreal_History(2,ii),m*cos(Xreal_History(3,ii)),m*sin(Xreal_History(3,ii)),'b','AutoScale','off','Marker','o' ) ;
-quiver(Xe_History(1,ii),Xe_History(2,ii),m*cos(Xe_History(3,ii)),m*sin(Xe_History(3,ii)),'r','AutoScale','off','Marker','+') ;
-quiver(Xdr_History(1,ii),Xdr_History(2,ii),m*cos(Xdr_History(3,ii)),m*sin(Xdr_History(3,ii)),'m','AutoScale','off','Marker','o' ) ;
+% ii = [1:225:length(Xe_History(1,:))] ;
+% m=10;
+% quiver(Xreal_History(1,ii),Xreal_History(2,ii),m*cos(Xreal_History(3,ii)),m*sin(Xreal_History(3,ii)),'b','AutoScale','off','Marker','o' ) ;
+% quiver(Xe_History(1,ii),Xe_History(2,ii),m*cos(Xe_History(3,ii)),m*sin(Xe_History(3,ii)),'r','AutoScale','off','Marker','+') ;
+% quiver(Xdr_History(1,ii),Xdr_History(2,ii),m*cos(Xdr_History(3,ii)),m*sin(Xdr_History(3,ii)),'m','AutoScale','off','Marker','o' ) ;
 
 
 
