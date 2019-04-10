@@ -67,7 +67,7 @@
 
 function main()
 
-
+gBias = -0.97 *pi/180;
 % .....................................................
 % Here I define the magnitude of the "noises", which I assume are present, 
 % polluting mesurements, models, etc.  
@@ -137,7 +137,7 @@ XeDR_History= zeros(4,Li) ;
 % Although you can use this proposed Q, it can be improved. Read
 % "MTRN4010_L06_Noise_in_the_inputs_of_ProcessModel.pdf" in order to implement a good refinement. 
 
-Q = diag( [ (0.01)^2 ,(0.01)^2 , (1*pi/180)^2], 0) ;
+Q = diag( [ (0.01)^2 ,(0.01)^2 , (1*pi/180)^2, (1*pi/180*1/3600)^2]) ;
 P_u = diag([stdDevGyro stdDevSpeed]);
 % Q matrix. Represent the covariance of the uncertainty about the process model.
 % .....................................................
@@ -145,7 +145,7 @@ P_u = diag([stdDevGyro stdDevSpeed]);
 
 time=0 ;
 % initialize the simulator of process (the "real system").
-InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,sdev_angleMeasurement,DtObservations);
+InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,sdev_angleMeasurement,DtObservations,1);
 % (BTW: this is just a simulation to replace the real system, because we,
 % for the moment, do not have the real system. )
 
@@ -185,9 +185,9 @@ for i=1:Li,     % loop
         [0,0, 0,  1] 
         ] ; 
     
-    F_u = Dt*[ 
-        [Noisy_speed*cos(Xe(3)) 0];
-        [Noisy_speed*sin(Xe(3)) 0]; 
+    F_u = [ 
+        [Dt*Noisy_speed*cos(Xe(3)) 0];
+        [Dt*Noisy_speed*sin(Xe(3)) 0]; 
         [0 Dt];
         [0 0];
         ];
@@ -196,7 +196,7 @@ for i=1:Li,     % loop
     Q1 = Dt^2*diag( [ (0.01)^2 ,...
                         (0.01)^2 ,...
                             (1*pi/180)^2,...
-                                (1*pi/180*1/3600)^2]) ;
+                                0]);%(1*pi/180*1/3600)^2]) ;
     Q = (Q1 + Q_u);
     P = J*P*J'+ Q ;
     % ATTENTION: we need, in our case, to propose a consistent Q matrix (this is part of your assignment!)
@@ -255,6 +255,12 @@ for i=1:Li,     % loop
             %z  = MeasuredRanges(u) - ExpectedRange ;      
             z  = [[MeasuredRanges(u) - ExpectedRange];      
 	          [MeasuredAngles(u) - ExpectedAngle]];
+            
+%             if z(2) > pi
+%               z(2) = z(2) - 2*pi;
+%             elseif z(2) < -pi
+%               z(2) = z(2) + 2*pi;
+%             end
             % ------ covariance of the noise/uncetainty in the measurements
             %R = sdev_rangeMeasurement*sdev_rangeMeasurement*4 ;
             R = diag([sdev_rangeMeasurement^2*4 sdev_angleMeasurement^2*4]);
@@ -263,13 +269,14 @@ for i=1:Li,     % loop
         
             % Some intermediate steps for the EKF (as presented in the lecture notes)
             S = R + H*P*H' ;
-            iS = inv(S);%iS=1/S;                 % iS = inv(S) ;   % in this case S is 1x1 so inv(S) is just 1/S
-            K = P*H'*iS ;           % Kalman gain
-            % ----- finally, we do it...We obtain  X(k+1|k+1) and P(k+1|k+1)
-            
-            Xe = Xe+K*z ;       % update the  expected value
-            P = P-P*H'*iS*H*P;%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
-            % -----  individual EKF update done ...
+%             iS = inv(S);%iS=1/S;                 % iS = inv(S) ;   % in this case S is 1x1 so inv(S) is just 1/S
+             K = P*H'*1./S ;           % Kalman gain
+%             % ----- finally, we do it...We obtain  X(k+1|k+1) and P(k+1|k+1)
+%             
+             Xe = Xe+K*z ;       % update the  expected value
+%             P = P-P*H'*iS*H*P;%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
+
+% -----  individual EKF update done ...
         
             % Loop to the next observation based on available measurements..
         end;  
@@ -309,11 +316,12 @@ return ;
 % --- THIS IS THE PROCESS MODEL of MY SYSTEM. (it is a Kinemetic model)
     
 function Xnext=RunProcessModel(X,speed,GyroZ,dt) 
-    Xnext = zeros(4,1);
-    temp = X(4);
+%     Xnext = zeros(4,1);
+%     temp = X(4);
     Xnext = X + dt*[ speed*cos(X(3)) ;
                         speed*sin(X(3)) ; 
-                        GyroZ-X(4; 
+                        GyroZ-X(4); 
+%                         GyroZ; 
                         0; ] ;
 return ;
 
@@ -365,11 +373,12 @@ return ;
 
 
 
-function InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,sdev_angleMeasurement, DtObservations)
+function InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,sdev_angleMeasurement, DtObservations,gyro_bias)
     global ContextSimulation;
     ContextSimulation.Xreal = [ 0; 0;pi/2; 0] ;     % [x;y;phi;bias]
     ContextSimulation.stdDevSpeed = stdDevSpeed;
     ContextSimulation.stdDevGyro = stdDevGyro;
+    ContextSimulation.gyro_bias = gyro_bias;%%%%%%%%%%%
     ContextSimulation.Xreal = [0;0;pi/2;0];
     ContextSimulation.speed=0;
     ContextSimulation.GyroZ=0;
@@ -388,7 +397,7 @@ function [Noisy_speed,Noisy_GyroZ]=GetProcessModelInputs()
     % noise to the perfect measurements (the ones I get from the simulated "real" platform.
     global ContextSimulation;
     Noisy_speed =ContextSimulation.speed+ContextSimulation.stdDevSpeed*randn(1) ;
-    Noisy_GyroZ =ContextSimulation.GyroZ+ContextSimulation.stdDevGyro*randn(1);
+    Noisy_GyroZ =ContextSimulation.GyroZ+ContextSimulation.stdDevGyro*randn(1);%-ContextSimulation.gyro_bias;
 return;
 
 
@@ -468,9 +477,9 @@ function SomePlots(Xreal_History,Xe_History,Xdr_History,map) ;
 
 
 figure(2) ; clf ; hold on ;
-plot(Xreal_History(1,:),Xreal_History(2,:),'b') ;
+plot(Xreal_History(1,:),Xreal_History(2,:),'g.') ;
 plot(Xe_History(1,:),Xe_History(2,:),'r') ;
-plot(Xdr_History(1,:),Xdr_History(2,:),'g') ;
+plot(Xdr_History(1,:),Xdr_History(2,:),'b') ;
 if (map.nLandmarks>0),   
     plot(map.landmarks(:,1),map.landmarks(:,2),'*r') ;
     legend({'Real path','EKF Estimated path','DR Estimated path','Landmarks'});
@@ -482,12 +491,12 @@ end;
 
 
 
-% show vectors, for visualizing heading, at a small number of points.
-% ii = [1:225:length(Xe_History(1,:))] ;
-% m=10;
-% quiver(Xreal_History(1,ii),Xreal_History(2,ii),m*cos(Xreal_History(3,ii)),m*sin(Xreal_History(3,ii)),'b','AutoScale','off','Marker','o' ) ;
-% quiver(Xe_History(1,ii),Xe_History(2,ii),m*cos(Xe_History(3,ii)),m*sin(Xe_History(3,ii)),'r','AutoScale','off','Marker','+') ;
-% quiver(Xdr_History(1,ii),Xdr_History(2,ii),m*cos(Xdr_History(3,ii)),m*sin(Xdr_History(3,ii)),'m','AutoScale','off','Marker','o' ) ;
+%show vectors, for visualizing heading, at a small number of points.
+ii = [1:225:length(Xe_History(1,:))] ;
+m=10;
+quiver(Xreal_History(1,ii),Xreal_History(2,ii),m*cos(Xreal_History(3,ii)),m*sin(Xreal_History(3,ii)),'b','AutoScale','off','Marker','o' ) ;
+quiver(Xe_History(1,ii),Xe_History(2,ii),m*cos(Xe_History(3,ii)),m*sin(Xe_History(3,ii)),'r','AutoScale','off','Marker','+') ;
+quiver(Xdr_History(1,ii),Xdr_History(2,ii),m*cos(Xdr_History(3,ii)),m*sin(Xdr_History(3,ii)),'m','AutoScale','off','Marker','o' ) ;
 
 
 

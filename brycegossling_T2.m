@@ -196,7 +196,7 @@ for i=1:Li,     % loop
     Q1 = Dt^2*diag( [ (0.01)^2 ,...
                         (0.01)^2 ,...
                             (1*pi/180)^2,...
-                                (1*pi/180*1/3600)^2]) ;
+                                0]) ;
     Q = (Q1 + Q_u);
     P = J*P*J'+ Q ;
     % ATTENTION: we need, in our case, to propose a consistent Q matrix (this is part of your assignment!)
@@ -255,6 +255,12 @@ for i=1:Li,     % loop
             %z  = MeasuredRanges(u) - ExpectedRange ;      
             z  = [[MeasuredRanges(u) - ExpectedRange];      
 	          [MeasuredAngles(u) - ExpectedAngle]];
+            
+            if z(2) > pi
+              z(2) = z(2) - 2*pi;
+            elseif z(2) < -pi
+              z(2) = z(2) + 2*pi;
+            end
             % ------ covariance of the noise/uncetainty in the measurements
             %R = sdev_rangeMeasurement*sdev_rangeMeasurement*4 ;
             R = diag([sdev_rangeMeasurement^2*4 sdev_angleMeasurement^2*4]);
@@ -297,7 +303,7 @@ SomePlots(Xreal_History,Xe_History,XeDR_History,NavigationMap) ;
 figure(1); clf; hold on; grid on;
 t=linspace(0,4999,5000);
 t0=zeros(1,5000);
-plot(t, Xe_History(4,:)*180/pi,'b');
+plot(t, (Xe_History(4,:)-Xe(4,:))*180/pi,'b');
 plot(t, t0, 'r');
 hold off;
 
@@ -314,6 +320,7 @@ function Xnext=RunProcessModel(X,speed,GyroZ,dt)
     Xnext = X + dt*[ speed*cos(X(3)) ;
                         speed*sin(X(3)) ; 
                         GyroZ-X(4); 
+%                         GyroZ; 
                         0; ] ;
 return ;
 
@@ -370,6 +377,7 @@ function InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,sdev_angleM
     ContextSimulation.Xreal = [ 0; 0;pi/2; 0] ;     % [x;y;phi;bias]
     ContextSimulation.stdDevSpeed = stdDevSpeed;
     ContextSimulation.stdDevGyro = stdDevGyro;
+    
     ContextSimulation.Xreal = [0;0;pi/2;0];
     ContextSimulation.speed=0;
     ContextSimulation.GyroZ=0;
