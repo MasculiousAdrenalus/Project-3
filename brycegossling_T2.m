@@ -67,7 +67,6 @@
 
 function main()
 
-gBias = -0.97 *pi/180;
 % .....................................................
 % Here I define the magnitude of the "noises", which I assume are present, 
 % polluting mesurements, models, etc.  
@@ -137,7 +136,7 @@ XeDR_History= zeros(4,Li) ;
 % Although you can use this proposed Q, it can be improved. Read
 % "MTRN4010_L06_Noise_in_the_inputs_of_ProcessModel.pdf" in order to implement a good refinement. 
 
-Q = diag( [ (0.01)^2 ,(0.01)^2 , (1*pi/180)^2, 0]) ; %(1*(pi/180)*(1/3600))^2
+Q = diag( [ (0.01)^2 ,(0.01)^2 , (1*pi/180)^2, (1*(pi/180)*(1/3600))^2]) ; %(1*(pi/180)*(1/3600))^2
 P_u = diag([stdDevGyro stdDevSpeed]);
 % Q matrix. Represent the covariance of the uncertainty about the process model.
 % .....................................................
@@ -178,51 +177,51 @@ for i=1:Li,     % loop
     % Estimate new covariance, associated to the state after prediction
     % First , I evaluate the Jacobian matrix of the process model (see lecture notes), at X=X(k|k).
     % You should write the analytical expression on paper to understand the following line.
-%     J = [ 
-%         [1,0,-Dt*Noisy_speed*sin(Xe(3)), 0  ]  ;
-%         [0,1, Dt*Noisy_speed*cos(Xe(3)), 0] ;
-%         [0,0, 1, -Dt ]; 
-%         [0,0, 0,  1] 
-%         ] ; 
-%     
-%     F_u = Dt*[ 
-%         [Noisy_speed*cos(Xe(3)) 0];
-%         [Noisy_speed*sin(Xe(3)) 0]; 
-%         [0 Dt];
-%         [0 0];
-%         ];
-%     Q_u = F_u*(P_u)*F_u';
-%     % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
-%     Q1 = diag( [ (0.01)^2 ,...
-%                         (0.01)^2 ,...
-%                             (1*pi/180)^2,...
-%                                 0]) ;
-%     Q = (Q1 + Q_u);
-%     P = J*P*J'+ Q ;
-        J = [ 
-            [1,0,-Dt*Noisy_speed*sin(Xe(3)),0]; 
-            [0,1,Dt*Noisy_speed*cos(Xe(3)),0];
-            [ 0,0,1, -Dt ]; 
-            [0,0,0,1] 
-            ]; 
-        
-        %############
-        %******* Fu-> linearization of the function f about the inputs (velocity and angular velocity) 
-        Fu =   [Dt*cos(Xe(3)), 0; 
-                Dt*sin(Xe(3)), 0; 
-                0            , Dt;
-                0            , 0];
-        
-        % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
-        
-        %############
-        %******* Qu -> Covariance of the uncertainty/noise of the process model, exclusively as consequence of
-        % the uncertainty that pollutes our knowledge about the inputs
-        Qu = Fu*Pu*Fu';
-        
-        % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
-        %############
-        P = J*P*J' + Q + Qu;
+    J = [ 
+        [1,0,-Dt*Noisy_speed*sin(Xe(3)), 0  ]  ;
+        [0,1, Dt*Noisy_speed*cos(Xe(3)), 0] ;
+        [0,0, 1, -Dt ]; 
+        [0,0, 0,  1] 
+        ] ; 
+    
+    F_u = Dt*[ 
+        [Noisy_speed*cos(Xe(3)) 0];
+        [Noisy_speed*sin(Xe(3)) 0]; 
+        [0 Dt];
+        [0 0];
+        ];
+    Q_u = F_u*(P_u)*F_u';
+    % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
+    Q1 = diag( [ (0.01)^2 ,...
+                        (0.01)^2 ,...
+                            (1*pi/180)^2,...
+                                0]) ;
+    Q = (Q1 + Q_u);
+    P = J*P*J'+ Q ;
+%         J = [ 
+%             [1,0,-Dt*Noisy_speed*sin(Xe(3)),0]; 
+%             [0,1,Dt*Noisy_speed*cos(Xe(3)),0];
+%             [ 0,0,1, -Dt ]; 
+%             [0,0,0,1] 
+%             ]; 
+%         
+%         %############
+%         %******* Fu-> linearization of the function f about the inputs (velocity and angular velocity) 
+%         Fu =   [Dt*cos(Xe(3)), 0; 
+%                 Dt*sin(Xe(3)), 0; 
+%                 0            , Dt;
+%                 0            , 0];
+%         
+%         % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
+%         
+%         %############
+%         %******* Qu -> Covariance of the uncertainty/noise of the process model, exclusively as consequence of
+%         % the uncertainty that pollutes our knowledge about the inputs
+%         Qu = Fu*Pu*Fu';
+%         
+%         % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
+%         %############
+%         P = J*P*J' + Q + Qu;
         
     % ATTENTION: we need, in our case, to propose a consistent Q matrix (this is part of your assignment!)
         
@@ -424,7 +423,7 @@ function [Noisy_speed,Noisy_GyroZ]=GetProcessModelInputs()
     global ContextSimulation;
     Noisy_speed =ContextSimulation.speed+ContextSimulation.stdDevSpeed*randn(1) ;
 
-    Noisy_GyroZ =ContextSimulation.GyroZ+ContextSimulation.stdDevGyro*randn(1)-deg2rad(1);
+    Noisy_GyroZ =ContextSimulation.GyroZ+ContextSimulation.stdDevGyro*randn(1)+deg2rad(1);
 
 return;
 
