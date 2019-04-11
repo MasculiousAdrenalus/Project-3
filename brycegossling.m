@@ -1,4 +1,6 @@
+%Author: <Bryce Gossling>, Z3424655
 
+%Program: Solution for AAS, S1.2018, Project2
 function brycegossling(file)
 % close all;
 global ABCD;
@@ -152,7 +154,7 @@ for i = 2:N_imu             % in this example I skip some of the laser scans.
         scan_i = dataL.Scans(:,j);
         scan = ExtractScan(scan_i);
         r = ExtractOOI(scan.ranges, scan.intensity, MyGUIHandles);   % some function to use the data...
-        %PlotScan(scan.ranges, scan.intensity, r, MyGUIHandles,j,time_laser(j));
+        PlotScan(scan.ranges, scan.intensity, r, MyGUIHandles,j,time_laser(j));
 
         OOI.local = ExtractOOIHR(r);
         alpha = yaw(i) - (pi/2);
@@ -217,7 +219,7 @@ function PlotScan(ranges, intensity, r, mh,i,t)
     Y = sin(angles).*ranges+0.46;
     OOI.x=[];
     OOI.y=[];
-    %set(mh.plot1(1),'xdata',X,'ydata',Y);
+    set(mh.plot1(1),'xdata',X,'ydata',Y);
     OOI = ExtractOOIHR(r);
     set(mh.plot1(3),'xdata',OOI.x,'ydata',OOI.y);
     ii = find(intensity~=0);

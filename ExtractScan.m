@@ -1,3 +1,6 @@
+%Author: <Bryce Gossling>, Z3424655
+
+%Program: Solution for AAS, S1.2018, Project2
 function data = ExtractScan(scan)
     MaskLow13Bits = uint16(2^13-1); % mask for extracting the range bits.
     maskE000 = bitshift(uint16(7),13)  ;

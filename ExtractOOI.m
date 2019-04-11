@@ -1,3 +1,6 @@
+%Author: <Bryce Gossling>, Z3424655
+
+%Program: Solution for AAS, S1.2018, Project2
 %%
 function r = ExtractOOI(ranges, intensity, mh)
 %load('DataForProject02/Laser__2C.mat', 'dataL');

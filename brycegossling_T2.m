@@ -1,3 +1,7 @@
+%Author: <Bryce Gossling>, Z3424655
+
+%Program: Solution for AAS, S1.2018, Project3.Part2
+
 % DemoEKF.m - version 2018.1
 % MRTN4010 - S1.2018
 % Example using Extended Kalman Filter (EKF) for the localization problem, using LIDAR range observations.
@@ -327,7 +331,7 @@ fprintf('Done. Showing results, now..\n');
 SomePlots(Xreal_History,Xe_History,XeDR_History,NavigationMap) ;
 figure(1); clf; hold on; grid on;
 t=linspace(0,4999,5000);
-t0=zeros(1,5000);
+t0=ones(1,5000);
 plot(t, (Xe_History(4,:))*180/pi,'b');
 plot(t, t0, 'r');
 
@@ -422,7 +426,7 @@ function [Noisy_speed,Noisy_GyroZ]=GetProcessModelInputs()
     % noise to the perfect measurements (the ones I get from the simulated "real" platform.
     global ContextSimulation;
     Noisy_speed =ContextSimulation.speed+ContextSimulation.stdDevSpeed*randn(1) ;
-
+%%%
     Noisy_GyroZ =ContextSimulation.GyroZ+ContextSimulation.stdDevGyro*randn(1)+deg2rad(1);
 
 return;
@@ -518,12 +522,12 @@ end;
 
 
 
-% show vectors, for visualizing heading, at a small number of points.
-% ii = [1:225:length(Xe_History(1,:))] ;
-% m=10;
-% quiver(Xreal_History(1,ii),Xreal_History(2,ii),m*cos(Xreal_History(3,ii)),m*sin(Xreal_History(3,ii)),'b','AutoScale','off','Marker','o' ) ;
-% quiver(Xe_History(1,ii),Xe_History(2,ii),m*cos(Xe_History(3,ii)),m*sin(Xe_History(3,ii)),'r','AutoScale','off','Marker','+') ;
-% quiver(Xdr_History(1,ii),Xdr_History(2,ii),m*cos(Xdr_History(3,ii)),m*sin(Xdr_History(3,ii)),'m','AutoScale','off','Marker','o' ) ;
+%show vectors, for visualizing heading, at a small number of points.
+ii = [1:225:length(Xe_History(1,:))] ;
+m=10;
+quiver(Xreal_History(1,ii),Xreal_History(2,ii),m*cos(Xreal_History(3,ii)),m*sin(Xreal_History(3,ii)),'b','AutoScale','off','Marker','o' ) ;
+quiver(Xe_History(1,ii),Xe_History(2,ii),m*cos(Xe_History(3,ii)),m*sin(Xe_History(3,ii)),'r','AutoScale','off','Marker','+') ;
+quiver(Xdr_History(1,ii),Xdr_History(2,ii),m*cos(Xdr_History(3,ii)),m*sin(Xdr_History(3,ii)),'m','AutoScale','off','Marker','o' ) ;
 
 
 

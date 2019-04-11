@@ -1,3 +1,7 @@
+%Author: <Bryce Gossling>, Z3424655
+
+%Program: Solution for AAS, S1.2018, Project3.Part1
+
 % DemoEKF.m - version 2018.1
 % MRTN4010 - S1.2018
 % Example using Extended Kalman Filter (EKF) for the localization problem, using LIDAR range observations.
@@ -235,7 +239,7 @@ for i=1:Li,     % loop
             %(measured output value - expected output value)
             %z  = MeasuredRanges(u) - ExpectedRange ;      
             z  = [[MeasuredRanges(u) - ExpectedRange];      
-	          [MeasuredAngles(u) - ExpectedAngle]]
+	          [wrapToPi(MeasuredAngles(u) - ExpectedAngle)]]
             % ------ covariance of the noise/uncetainty in the measurements
             %R = sdev_rangeMeasurement*sdev_rangeMeasurement*4 ;
             R = diag([sdev_rangeMeasurement*sdev_rangeMeasurement*4 sdev_angleMeasurement*sdev_angleMeasurement*4]);
@@ -454,11 +458,11 @@ end;
 
 
 % show vectors, for visualizing heading, at a small number of points.
-% ii = [1:225:length(Xe_History(1,:))] ;
-% m=10;
-% quiver(Xreal_History(1,ii),Xreal_History(2,ii),m*cos(Xreal_History(3,ii)),m*sin(Xreal_History(3,ii)),'b','AutoScale','off','Marker','o' ) ;
-% quiver(Xe_History(1,ii),Xe_History(2,ii),m*cos(Xe_History(3,ii)),m*sin(Xe_History(3,ii)),'r','AutoScale','off','Marker','+') ;
-% quiver(Xdr_History(1,ii),Xdr_History(2,ii),m*cos(Xdr_History(3,ii)),m*sin(Xdr_History(3,ii)),'m','AutoScale','off','Marker','o' ) ;
+ii = [1:225:length(Xe_History(1,:))] ;
+m=10;
+quiver(Xreal_History(1,ii),Xreal_History(2,ii),m*cos(Xreal_History(3,ii)),m*sin(Xreal_History(3,ii)),'b','AutoScale','off','Marker','o' ) ;
+quiver(Xe_History(1,ii),Xe_History(2,ii),m*cos(Xe_History(3,ii)),m*sin(Xe_History(3,ii)),'r','AutoScale','off','Marker','+') ;
+quiver(Xdr_History(1,ii),Xdr_History(2,ii),m*cos(Xdr_History(3,ii)),m*sin(Xdr_History(3,ii)),'m','AutoScale','off','Marker','o' ) ;
 
 
 
