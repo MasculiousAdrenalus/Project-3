@@ -1,6 +1,6 @@
 %%
 function r = ExtractOOI(ranges, intensity, mh)
-load('DataForProject02/Laser__2C.mat', 'dataL');
+%load('DataForProject02/Laser__2C.mat', 'dataL');
 r.N = 0;
 r.Centers = [];
 r.Sizes   = [];
@@ -10,8 +10,8 @@ cluster_X =[];
 cluster_Y = [];
 cluster = [];
 
-%angles = [0:360]'*0.5* pi/180 ;         % associated angle, for each individual range in a scan
-angles = dataL.angles;
+angles = [0:360]'*0.5* pi/180 ;         % associated angle, for each individual range in a scan
+%angles = dataL.angles;
 Xpos = -cos(angles).*ranges;
 Ypos = sin(angles).*ranges+0.46;
 
