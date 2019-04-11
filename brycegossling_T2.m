@@ -142,7 +142,7 @@ P_u = diag([stdDevGyro stdDevSpeed]);
 % Q matrix. Represent the covariance of the uncertainty about the process model.
 % .....................................................
 
-
+Pu = diag([stdDevGyro^2, stdDevSpeed^2]);
 time=0 ;
 % initialize the simulator of process (the "real system").
 InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,sdev_angleMeasurement,DtObservations);
@@ -178,27 +178,52 @@ for i=1:Li,     % loop
     % Estimate new covariance, associated to the state after prediction
     % First , I evaluate the Jacobian matrix of the process model (see lecture notes), at X=X(k|k).
     % You should write the analytical expression on paper to understand the following line.
-    J = [ 
-        [1,0,-Dt*Noisy_speed*sin(Xe(3)), 0  ]  ;
-        [0,1, Dt*Noisy_speed*cos(Xe(3)), 0] ;
-        [0,0, 1, -Dt ]; 
-        [0,0, 0,  1] 
-        ] ; 
-    
-    F_u = Dt*[ 
-        [Noisy_speed*cos(Xe(3)) 0];
-        [Noisy_speed*sin(Xe(3)) 0]; 
-        [0 Dt];
-        [0 0];
-        ];
-    Q_u = F_u*(P_u)*F_u';
-    % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
-    Q1 = Dt^2*diag( [ (0.01)^2 ,...
-                        (0.01)^2 ,...
-                            (1*pi/180)^2,...
-                                0]) ;
-    Q = (Q1 + Q_u);
-    P = J*P*J'+ Q ;
+%     J = [ 
+%         [1,0,-Dt*Noisy_speed*sin(Xe(3)), 0  ]  ;
+%         [0,1, Dt*Noisy_speed*cos(Xe(3)), 0] ;
+%         [0,0, 1, -Dt ]; 
+%         [0,0, 0,  1] 
+%         ] ; 
+%     
+%     F_u = Dt*[ 
+%         [Noisy_speed*cos(Xe(3)) 0];
+%         [Noisy_speed*sin(Xe(3)) 0]; 
+%         [0 Dt];
+%         [0 0];
+%         ];
+%     Q_u = F_u*(P_u)*F_u';
+%     % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
+%     Q1 = diag( [ (0.01)^2 ,...
+%                         (0.01)^2 ,...
+%                             (1*pi/180)^2,...
+%                                 0]) ;
+%     Q = (Q1 + Q_u);
+%     P = J*P*J'+ Q ;
+        J = [ 
+            [1,0,-Dt*Noisy_speed*sin(Xe(3)),0]; 
+            [0,1,Dt*Noisy_speed*cos(Xe(3)),0];
+            [ 0,0,1, -Dt ]; 
+            [0,0,0,1] 
+            ]; 
+        
+        %############
+        %******* Fu-> linearization of the function f about the inputs (velocity and angular velocity) 
+        Fu =   [Dt*cos(Xe(3)), 0; 
+                Dt*sin(Xe(3)), 0; 
+                0            , Dt;
+                0            , 0];
+        
+        % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
+        
+        %############
+        %******* Qu -> Covariance of the uncertainty/noise of the process model, exclusively as consequence of
+        % the uncertainty that pollutes our knowledge about the inputs
+        Qu = Fu*Pu*Fu';
+        
+        % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
+        %############
+        P = J*P*J' + Q + Qu;
+        
     % ATTENTION: we need, in our case, to propose a consistent Q matrix (this is part of your assignment!)
         
     % And, here, we calculate the predicted expected value. 
@@ -256,11 +281,11 @@ for i=1:Li,     % loop
             z  = [[MeasuredRanges(u) - ExpectedRange];      
 	          [MeasuredAngles(u) - ExpectedAngle]];
             
-            if z(2) > pi
-              z(2) = z(2) - 2*pi;
-            elseif z(2) < -pi
-              z(2) = z(2) + 2*pi;
-            end
+%             if z(2) > pi
+%               z(2) = z(2) - 2*pi;
+%             elseif z(2) < -pi
+%               z(2) = z(2) + 2*pi;
+%             end
             % ------ covariance of the noise/uncetainty in the measurements
             %R = sdev_rangeMeasurement*sdev_rangeMeasurement*4 ;
             R = diag([sdev_rangeMeasurement^2*4 sdev_angleMeasurement^2*4]);
@@ -274,7 +299,8 @@ for i=1:Li,     % loop
             % ----- finally, we do it...We obtain  X(k+1|k+1) and P(k+1|k+1)
             
             Xe = Xe+K*z ;       % update the  expected value
-            P = P-P*H'*iS*H*P;%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
+            %P = P-P*H'*iS*H*P;%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
+            P = P-K*H*P ;       
             % -----  individual EKF update done ...
         
             % Loop to the next observation based on available measurements..
