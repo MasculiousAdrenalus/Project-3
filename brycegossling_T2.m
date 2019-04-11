@@ -137,12 +137,12 @@ XeDR_History= zeros(4,Li) ;
 % Although you can use this proposed Q, it can be improved. Read
 % "MTRN4010_L06_Noise_in_the_inputs_of_ProcessModel.pdf" in order to implement a good refinement. 
 
-Q = diag( [ (0.01)^2 ,(0.01)^2 , (1*pi/180)^2, (1*pi/180*1/3600)^2]) ;
+Q = diag( [ (0.01)^2 ,(0.01)^2 , (1*pi/180)^2, 0]) ; %(1*(pi/180)*(1/3600))^2
 P_u = diag([stdDevGyro stdDevSpeed]);
 % Q matrix. Represent the covariance of the uncertainty about the process model.
 % .....................................................
 
-Pu = diag([stdDevGyro^2, stdDevSpeed^2]);
+Pu = diag([stdDevSpeed^2, stdDevGyro^2]);
 time=0 ;
 % initialize the simulator of process (the "real system").
 InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,sdev_angleMeasurement,DtObservations);
@@ -279,7 +279,7 @@ for i=1:Li,     % loop
             %(measured output value - expected output value)
             %z  = MeasuredRanges(u) - ExpectedRange ;      
             z  = [[MeasuredRanges(u) - ExpectedRange];      
-	          [MeasuredAngles(u) - ExpectedAngle]];
+	          wrapToPi([MeasuredAngles(u) - ExpectedAngle])];
             
 %             if z(2) > pi
 %               z(2) = z(2) - 2*pi;
@@ -328,9 +328,15 @@ fprintf('Done. Showing results, now..\n');
 SomePlots(Xreal_History,Xe_History,XeDR_History,NavigationMap) ;
 figure(1); clf; hold on; grid on;
 t=linspace(0,4999,5000);
+<<<<<<< HEAD
 t0=zeros(1,5000);
 plot(t, (Xe_History(4,:))*180/pi,'b');
 plot(t, t0, 'r');
+=======
+t0=ones(1,5000);
+plot(180/pi*(Xe_History(4,:)));%-Xe(4,:)),'b');
+%plot(t, t0, 'r');
+>>>>>>> 6b2e09bed25904aac4c2262a1882493a2b3d10c4
 hold off;
 
 return ;        
@@ -422,7 +428,11 @@ function [Noisy_speed,Noisy_GyroZ]=GetProcessModelInputs()
     % noise to the perfect measurements (the ones I get from the simulated "real" platform.
     global ContextSimulation;
     Noisy_speed =ContextSimulation.speed+ContextSimulation.stdDevSpeed*randn(1) ;
+<<<<<<< HEAD
     Noisy_GyroZ =ContextSimulation.GyroZ+ContextSimulation.stdDevGyro*randn(1)-deg2rad(1);
+=======
+    Noisy_GyroZ =ContextSimulation.GyroZ+ContextSimulation.stdDevGyro*randn(1) + deg2rad(1);
+>>>>>>> 6b2e09bed25904aac4c2262a1882493a2b3d10c4
 return;
 
 
@@ -466,7 +476,7 @@ function [nDetectedLandmarks,MasuredRanges,MeasuredAngles,IDs]=GetObservationMea
       
         
         if (nDetectedLandmarks<1)       % no detected landmarks...
-            MasuredRanges=[];   IDs=[];    return ; 
+            MasuredRanges=[]; MeasuredAngles=[];  IDs=[];    return ; 
         end;
         
         
