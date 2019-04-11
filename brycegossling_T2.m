@@ -328,15 +328,10 @@ fprintf('Done. Showing results, now..\n');
 SomePlots(Xreal_History,Xe_History,XeDR_History,NavigationMap) ;
 figure(1); clf; hold on; grid on;
 t=linspace(0,4999,5000);
-<<<<<<< HEAD
 t0=zeros(1,5000);
 plot(t, (Xe_History(4,:))*180/pi,'b');
 plot(t, t0, 'r');
-=======
-t0=ones(1,5000);
-plot(180/pi*(Xe_History(4,:)));%-Xe(4,:)),'b');
-%plot(t, t0, 'r');
->>>>>>> 6b2e09bed25904aac4c2262a1882493a2b3d10c4
+
 hold off;
 
 return ;        
@@ -428,11 +423,9 @@ function [Noisy_speed,Noisy_GyroZ]=GetProcessModelInputs()
     % noise to the perfect measurements (the ones I get from the simulated "real" platform.
     global ContextSimulation;
     Noisy_speed =ContextSimulation.speed+ContextSimulation.stdDevSpeed*randn(1) ;
-<<<<<<< HEAD
+
     Noisy_GyroZ =ContextSimulation.GyroZ+ContextSimulation.stdDevGyro*randn(1)-deg2rad(1);
-=======
-    Noisy_GyroZ =ContextSimulation.GyroZ+ContextSimulation.stdDevGyro*randn(1) + deg2rad(1);
->>>>>>> 6b2e09bed25904aac4c2262a1882493a2b3d10c4
+
 return;
 
 
