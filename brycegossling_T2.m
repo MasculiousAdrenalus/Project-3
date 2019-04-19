@@ -427,7 +427,7 @@ function [Noisy_speed,Noisy_GyroZ]=GetProcessModelInputs()
     global ContextSimulation;
     Noisy_speed =ContextSimulation.speed+ContextSimulation.stdDevSpeed*randn(1) ;
 %%%
-    Noisy_GyroZ =ContextSimulation.GyroZ+ContextSimulation.stdDevGyro*randn(1)+deg2rad(1);
+    Noisy_GyroZ =ContextSimulation.GyroZ+ContextSimulation.stdDevGyro*randn(1);%+deg2rad(1);
 
 return;
 
