@@ -14,6 +14,8 @@ load('DataForProject02/IMU_dataC.mat','IMU');
 load('DataForProject02/Speed_dataC.mat','Vel');
 load('DataForProject02/Laser__2C.mat', 'dataL');
 
+t= linspace(1,length(IMU.DATAf(1,:)),length(IMU.DATAf(1,:)));
+
 %imu setup init
 
 accel_imu = IMU.DATAf(1:3,:)';
@@ -56,8 +58,8 @@ speed = Vel.speeds;
 
 
 %KALMAN VARS
-stdDevGyro = deg2rad(1.4) ;%radians        
-stdDevSpeed = 0.4;%m/s 
+stdDevGyro = 2*pi/180; %deg2rad(1.4) ;%radians        
+stdDevSpeed = 0.15;%0.4;%m/s 
 std_rangeMeasurement = 0.16;%meters
 std_angleMeasurement = deg2rad(1.1);%radians
 
@@ -68,7 +70,7 @@ Q_u = diag([stdDevGyro stdDevSpeed]);
 
 R = diag([std_rangeMeasurement*std_rangeMeasurement*4,...
       std_angleMeasurement*std_angleMeasurement*4]);
-
+Xe = [ 0; 0; pi/2 ] ;  
 Xe_History = zeros(3,length(time_imu));
   
 %%
@@ -100,7 +102,7 @@ grid on; hold on;
 MyGUIHandles.plot2 = plot(0,0,'m.',...
                           0,0,'ro',...
                           0,0,'b+',...
-                          0,0,'g+');
+                          0,0,'g.');
 axis([-8,8,-8,8]);
 MyGUIHandles.plot2_title = title(''); 
 fprintf('\nThere are [ %d ] laser scans in this dataset (file [%s])\n',dataL.N,'Laser__2C.mat');
@@ -127,6 +129,10 @@ hold off;
 %                           0,0,'go',...
 %                           0,0,'m+'); 
 % hold off;
+figure(6); clf();
+grid on; hold on;
+MyGUIHandles.plot6 = plot(0,0,'b.'); 
+hold off;
 %%
 % Gets first graphs
 for k = 2:N_imu
@@ -161,8 +167,8 @@ set(MyGUIHandles.plot2(2),'xdata',OOI.local.x,'ydata', OOI.local.y);
 
 
 
-skip=3;
-
+skip=0;
+    Xe = [X(1); Y(1); yaw(1)];
 %-------------resets variables
 % yaw = zeros(N_imu,1);
 % X = zeros(N_imu,1);
@@ -183,7 +189,7 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
         scan_i = dataL.Scans(:,j);
         scan = ExtractScan(scan_i);
         r = ExtractOOI(scan.ranges, scan.intensity, MyGUIHandles);   % some function to use the data...
-        PlotScan(scan.ranges, scan.intensity, r, MyGUIHandles,j,time_laser(j));
+        %PlotScan(scan.ranges, scan.intensity, r, MyGUIHandles,j,time_laser(j));
 
         OOI.local = ExtractOOIHR(r);
         alpha = yaw(i) - (pi/2);
@@ -200,8 +206,8 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     J = [ [1,0,-dt*speed(i)*sin(yaw(i))]; [0,1,dt*speed(i)*cos(yaw(i))]; [ 0,0,1 ] ] ;
     A = dt*[[speed(i)*cos(yaw(i)) 0]; [speed(i)*sin(yaw(i)) 0]; [0 1];];
     P = J*P*J'+ (Q + A*Q_u*A');
-    
-    Xe = [X(i) Y(i) yaw(i)];
+    %Xe = [X(i); Y(i); yaw(i)];
+
     Xe = RunProcessModel(Xe,speed(i),double(omega_imu(i,3)),dt) ;
     for k = 1:OOI.local.N
         landmark_x = OOI.global.x(OOI.local.id(k));
@@ -234,23 +240,27 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
 	    % ----- finally, we do it...We obtain  X(k+1|k+1) and P(k+1|k+1)
 	    Xe = Xe+K*z            % update the  expected value
 	    P = P-P*H'*iS*H*P ;     % update the Covariance
+        %set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
     end
     
-    %Xe_History(:,i) = Xe;
-    
-    set(MyGUIHandles.plot2(3),'xdata',OOI.local.x,'ydata', OOI.local.y);
+    Xe_History(:,i) = Xe;
+    %set(MyGUIHandles.plot6,'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
+    %set(handles.kalman_trace,'xdata',Xe_History(1,1:i),'ydata',Xe_History(2,1:i));
+    %set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
     pause(0.0001);
     %i=i+skip;
 end
+
+    assignin('base', 'Xe_History', Xe_History);
     fprintf('\nDONE!\n');
 
 return;
 end
 %%
 function Xnext=RunProcessModel(Xe,speed,GyroZ,dt) 
-    Xnext = Xe + [ dt*speed*cos(Xe(3)) + Xe(1);
-                   dt*speed*sin(Xe(3)) + Xe(2); 
-                   GyroZ + Xe(3); ] ;
+    Xnext = Xe + [ (dt*speed*cos(Xe(3)));
+                   (dt*speed*sin(Xe(3)));
+                   (GyroZ) ] ;
 return ;
 end
 %%
@@ -264,11 +274,10 @@ function OOI = AssociateIOO(OOI, H, t,q)
        dist_x = OOI.global.x - OOI.local.x(i);
        dist_y = OOI.global.y - OOI.local.y(i);
        dist = sqrt(dist_x.^2 + dist_y.^2);
-       [dist_min,id] = min(dist)
+       [dist_min,id] = min(dist);
        OOI.local.id(i) = id;
-       %OOI.dist = [OOI.dist dist];
         assignin('base','dist', dist);
-        if dist_min < 1.1
+        if dist_min < 0.4
             OOI.local.id(i) = id;
             set(H.labels(i),...
             'position',[OOI.local.x(i)-1,OOI.local.y(i)-0.5],...
