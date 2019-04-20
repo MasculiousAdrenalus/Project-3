@@ -14,7 +14,6 @@ load('DataForProject02/IMU_dataC.mat','IMU');
 load('DataForProject02/Speed_dataC.mat','Vel');
 load('DataForProject02/Laser__2C.mat', 'dataL');
 
-t= linspace(1,length(IMU.DATAf(1,:)),length(IMU.DATAf(1,:)));
 
 %imu setup init
 
@@ -55,13 +54,15 @@ OOI.MeasuredBearings = [];
 
 %speed data setup
 speed = Vel.speeds;
-
+t= linspace(1,length(IMU.DATAf(1,:)),length(IMU.DATAf(1,:)));
+figure(7); clf;
+plot(t,speed);
 
 %KALMAN VARS
 stdDevGyro = 2*pi/180; %deg2rad(1.4) ;%radians        
 stdDevSpeed = 0.15;%0.4;%m/s 
 std_rangeMeasurement = 0.16;%meters
-std_angleMeasurement = deg2rad(1.1);%radians
+std_angleMeasurement = 0.5*pi/180;%radians
 
 P = zeros(3,3) ;
 
@@ -108,27 +109,27 @@ MyGUIHandles.plot2_title = title('');
 fprintf('\nThere are [ %d ] laser scans in this dataset (file [%s])\n',dataL.N,'Laser__2C.mat');
 MyGUIHandles.labels = text(zeros(1,5),zeros(1,5),'','Color','k'); 
 hold off;
-% figure(3); clf();
-% grid on; hold on;
-% MyGUIHandles.plot3 = plot(0,0,'b.',...
-%                           0,0,'r.',...
-%                           0,0,'go',...
-%                           0,0,'m+');  
-% hold off;
-% figure(4); clf();
-% grid on; hold on;
-% MyGUIHandles.plot4 = plot(0,0,'b.',...
-%                           0,0,'r.',...
-%                           0,0,'go',...
-%                           0,0,'m+'); 
-% hold off;
-% figure(5); clf();
-% grid on; hold on;
-% MyGUIHandles.plot5 = plot(0,0,'b.',...
-%                           0,0,'r.',...
-%                           0,0,'go',...
-%                           0,0,'m+'); 
-% hold off;
+figure(3); clf();
+grid on; hold on;
+MyGUIHandles.plot3 = plot(0,0,'b.',...
+                          0,0,'r.',...
+                          0,0,'go',...
+                          0,0,'m+');  
+hold off;
+figure(4); clf();
+grid on; hold on;
+MyGUIHandles.plot4 = plot(0,0,'b.',...
+                          0,0,'r.',...
+                          0,0,'go',...
+                          0,0,'m+'); 
+hold off;
+figure(5); clf();
+grid on; hold on;
+MyGUIHandles.plot5 = plot(0,0,'b.',...
+                          0,0,'r.',...
+                          0,0,'go',...
+                          0,0,'m+'); 
+hold off;
 figure(6); clf();
 grid on; hold on;
 MyGUIHandles.plot6 = plot(0,0,'b.'); 
@@ -141,9 +142,9 @@ for k = 2:N_imu
     X(k) = X(k-1) + dt*speed(k-1) * cos(yaw(k-1));
     Y(k) = Y(k-1) + dt*speed(k-1) * sin(yaw(k-1));
 end
-%set(MyGUIHandles.plot3(1),'xdata',time_imu,'ydata', -(yaw_rate-bias));
-%set(MyGUIHandles.plot4(1),'xdata',time_imu,'ydata', rad2deg(yaw));
-%set(MyGUIHandles.plot5(1),'xdata',X,'ydata', Y);
+set(MyGUIHandles.plot3(1),'xdata',time_imu,'ydata', -(yaw_rate-bias));
+set(MyGUIHandles.plot4(1),'xdata',time_imu,'ydata', rad2deg(yaw));
+set(MyGUIHandles.plot5(1),'xdata',X,'ydata', Y);
 
 %scan first frame
 scan_i = dataL.Scans(:,1);
@@ -168,7 +169,7 @@ set(MyGUIHandles.plot2(2),'xdata',OOI.local.x,'ydata', OOI.local.y);
 
 
 skip=0;
-    Xe = [X(1); Y(1); yaw(1)];
+    %Xe = [X(1); Y(1); yaw(1)];
 %-------------resets variables
 % yaw = zeros(N_imu,1);
 % X = zeros(N_imu,1);
@@ -195,7 +196,7 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
         alpha = yaw(i) - (pi/2);
         OOI.local = Transform(alpha, X(i), Y(i), OOI.local.x, OOI.local.y);
         set(MyGUIHandles.plot2(3),'xdata',OOI.local.x,'ydata', OOI.local.y);
-        OOI = AssociateIOO(OOI, MyGUIHandles, j, time_laser(j));
+        OOI = AssociateIOO(OOI, MyGUIHandles, j, time_laser(j),Xe);
         %OOI.kalman = 
         
 
@@ -203,13 +204,36 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     end
     set(MyGUIHandles.plot2(1),'xdata',X(1:i),'ydata', Y(1:i));
     
-    J = [ [1,0,-dt*speed(i)*sin(yaw(i))]; [0,1,dt*speed(i)*cos(yaw(i))]; [ 0,0,1 ] ] ;
-    A = dt*[[speed(i)*cos(yaw(i)) 0]; [speed(i)*sin(yaw(i)) 0]; [0 1];];
+    J = [   [1,0,-dt*speed(i)*sin(Xe(3))];
+            [0,1,dt*speed(i)*cos(Xe(3))]; 
+            [ 0,0,1 ] ] ;
+    A = dt*[[speed(i)*cos(Xe(3)) 0]; [speed(i)*sin(Xe(3)) 0]; [0 1];];
     P = J*P*J'+ (Q + A*Q_u*A');
     %Xe = [X(i); Y(i); yaw(i)];
+    
 
     Xe = RunProcessModel(Xe,speed(i),double(omega_imu(i,3)),dt) ;
-    for k = 1:OOI.local.N
+
+% 
+%     %Xe    = RunProcessModel(Xe,Xe(4),gyroZ,dt);
+%     %2. Estimate new covariance after prediction
+%     J = [   [1,0,-dt*speed(i)*sin(Xe(3))];
+%             [0,1,dt*speed(i)*cos(Xe(3))];
+%             [0,0,1                     ]
+%         ];
+%     % a) Calculate better Q
+%     Pu = diag([stdDevGyro^2]);
+%     Ju = [  0;
+%         0;
+%         dt;];  % (as a side thought, how does these values differ from discrete changeX/changeU?)
+%     Qu = Ju*Pu*Ju';
+%     Q1 = dt^2*diag( [ (0.01)^2 ,(0.01)^2 , (1*pi/180)^2]) ;
+%     Q = Q1 + Qu;
+%     % b) Calculate new covariance (P(K+1|K) = J*P(K|K)*J'+Q);
+%     P = J*P*J'+Q ;
+    % Prediction step is done
+    
+    for k = 1:OOI.local.x
         landmark_x = OOI.global.x(OOI.local.id(k));
         landmark_y = OOI.global.y(OOI.local.id(k));
 
@@ -222,8 +246,13 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
 		 [eDY/(eDX^2 + eDY^2), -eDX/(eDX^2 + eDY^2), -1]];
 
 	    ExpectedRange = eDD ;  
-	    ExpectedBearing = wrapToPi(atan2(eDY,eDX) - Xe(3) + pi/2);
-
+	    ExpectedBearing = wrapToPi(atan2(eDY,eDX) - Xe(3) + pi/2)
+        
+        OOI.MeasuredRanges = [OOI.MeasuredRanges, sqrt( (OOI.global.y(k) - Xe(1))^2 + ...
+                                (OOI.global.y(k) - Xe(2))^2 ) ];
+        OOI.MeasuredBearings = [OOI.MeasuredBearings, atan2( (OOI.global.x(k) -Xe(1)),...
+                                (OOI.global.y(k) -Xe(2)))];
+                            
 	    z = [OOI.MeasuredRanges(k) - ExpectedRange; OOI.MeasuredBearings(k) - ExpectedBearing]; 
 
 
@@ -244,13 +273,15 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     end
     
     Xe_History(:,i) = Xe;
+    assignin('base','Xe_History',Xe_History);
     %set(MyGUIHandles.plot6,'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
     %set(handles.kalman_trace,'xdata',Xe_History(1,1:i),'ydata',Xe_History(2,1:i));
     %set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
     pause(0.0001);
     %i=i+skip;
 end
-
+    set(MyGUIHandles.plot6,'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
+    set(MyGUIHandles.plot6,'xdata',t,'ydata', Xe_History(3,:));
     assignin('base', 'Xe_History', Xe_History);
     fprintf('\nDONE!\n');
 
@@ -258,13 +289,14 @@ return;
 end
 %%
 function Xnext=RunProcessModel(Xe,speed,GyroZ,dt) 
-    Xnext = Xe + [ (dt*speed*cos(Xe(3)));
-                   (dt*speed*sin(Xe(3)));
-                   (GyroZ) ] ;
+    Xnext =     [ (dt*speed*cos(Xe(3)+Xe(1)));
+                   (dt*speed*sin(Xe(3)+Xe(2)));
+                   (GyroZ);
+                   ] ;
 return ;
 end
 %%
-function OOI = AssociateIOO(OOI, H, t,q)
+function OOI = AssociateIOO(OOI, H, t,q, Xe)
     %populates ids 
     OOI.local.N = length(OOI.local.x);
     OOI.local.id = zeros(OOI.local.N,1);
@@ -275,7 +307,7 @@ function OOI = AssociateIOO(OOI, H, t,q)
        dist_y = OOI.global.y - OOI.local.y(i);
        dist = sqrt(dist_x.^2 + dist_y.^2);
        [dist_min,id] = min(dist);
-       OOI.local.id(i) = id;
+       %OOI.local.id(i) = id;
         assignin('base','dist', dist);
         if dist_min < 0.4
             OOI.local.id(i) = id;
@@ -283,10 +315,7 @@ function OOI = AssociateIOO(OOI, H, t,q)
             'position',[OOI.local.x(i)-1,OOI.local.y(i)-0.5],...
             'String',['Best match: #',num2str(id),', Error: ', num2str(dist_min), ' m']);
         
-            OOI.MeasuredRanges = [OOI.MeasuredRanges, sqrt(OOI.local.x(i)^2 + ...
-                                    OOI.local.y(i)^2)];
-            OOI.MeasuredBearings = [OOI.MeasuredBearings, atan2(OOI.local.x(i),...
-                                    OOI.local.y(i))];
+
             %OOI.ObservedLandmarks = [ObservedLandmarks, local_OOI_list.global_ID(j)];
             %num_measurements = num_measurements + 1;
         else
