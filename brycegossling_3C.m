@@ -65,6 +65,7 @@ std_rangeMeasurement = 0.16;%meters
 std_angleMeasurement = 0.5*pi/180;%radians
 
 P = zeros(4,4) ;
+P(4,4) = (4*pi/180)^2; 
 
 Q = diag( [ (0.1)^2 ,(0.1)^2 , (2*pi/180)^2]) ;
 P_u = diag([stdDevGyro stdDevSpeed]);
@@ -206,19 +207,19 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     
     J = [   [1,0,-dt*speed(i)*sin(Xe(3)),0];
             [0,1,dt*speed(i)*cos(Xe(3)),0]; 
-            [ 0,0,1,0 ];
+            [ 0,0,1,-dt ];
             [ 0,0,0,1]] ;
-    A = dt*[[speed(i)*cos(Xe(3)) 0];
+    Ju = dt*[[speed(i)*cos(Xe(3)) 0];
             [speed(i)*sin(Xe(3)) 0];
-            [0 1];
+            [0 dt];
             [0 0];];
         
-        Q_u = A*(P_u)*A';
+        Q_u = Ju*(P_u)*Ju';
     % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
     Q1 = diag( [ (0.01)^2 ,...
                         (0.01)^2 ,...
                             (1*pi/180)^2,...
-                                (1.2)^2]) ;
+                                0]) ;%(1.2)^2]) ;
     Q = (Q1 + Q_u);
     P = J*P*J'+ Q ;
 
@@ -261,10 +262,10 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
 	    ExpectedRange = eDD ;  
 	    ExpectedBearing = wrapToPi(atan2(eDY,eDX) - Xe(3) + pi/2)
         
-        OOI.MeasuredRanges = [OOI.MeasuredRanges, sqrt( (OOI.global.x(k) - Xe(1))^2 + ...
-                                (OOI.global.y(k) - Xe(2))^2 ) ];
-        OOI.MeasuredBearings = [OOI.MeasuredBearings, wrapToPi(atan2( (OOI.global.y(k) -Xe(2) ),...
-                                                                       (OOI.global.x(k) -Xe(1) )))];
+        OOI.MeasuredRanges = [OOI.MeasuredRanges, sqrt( (OOI.global.x(k) - X(i))^2 + ...
+                                (OOI.global.y(k) - Y(i))^2 ) ]
+        OOI.MeasuredBearings = [OOI.MeasuredBearings, wrapToPi(atan2( (OOI.global.y(k) -Y(i) ),...
+                                                                       (OOI.global.x(k) -X(i) ) ) - yaw(i) + pi/2 )];
 %         OOI.MeasuredRanges = [OOI.MeasuredRanges, sqrt(local_OOI_list.Centers(1,j)^2 + ...
 %                             local_OOI_list.Centers(2,j)^2)];
 %         OOI.MeasuredBearings = [OOI.MeasuredBearings, atan2(OOI.local.y(k),...
@@ -296,7 +297,7 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     Xe_History(:,i) = Xe;
     assignin('base','Xe_History',Xe_History);
         %assignin('base', 'MyGUIHandles', MyGUIHandles);
-    
+    assignin('base', 'OOI', OOI);
     %set(MyGUIHandles.plot6,'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
     %set(handles.kalman_trace,'xdata',Xe_History(1,1:i),'ydata',Xe_History(2,1:i));
     pause(0.0001);
@@ -305,7 +306,7 @@ end
     set(MyGUIHandles.plot6,'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
     %set(MyGUIHandles.plot6,'xdata',t,'ydata', Xe_History(3,:));
     assignin('base', 'MyGUIHandles', MyGUIHandles);
-    assignin('base', 'Xe_History', Xe_History);
+
     fprintf('\nDONE!\n');
 
 return;
