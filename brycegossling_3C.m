@@ -233,7 +233,7 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
 %     P = J*P*J'+Q ;
     % Prediction step is done
     
-    for k = 1:OOI.local.x
+    for k = 1:length(OOI.local.x)
         landmark_x = OOI.global.x(OOI.local.id(k));
         landmark_y = OOI.global.y(OOI.local.id(k));
 
@@ -274,7 +274,8 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     
     Xe_History(:,i) = Xe;
     assignin('base','Xe_History',Xe_History);
-    %set(MyGUIHandles.plot6,'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
+    set(MyGUIHandles.plot3(2),'xdata',time_imu,'ydata', Xe_History(3,:));
+    set(MyGUIHandles.plot6,'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
     %set(handles.kalman_trace,'xdata',Xe_History(1,1:i),'ydata',Xe_History(2,1:i));
     %set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
     pause(0.0001);
