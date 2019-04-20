@@ -21,7 +21,7 @@ accel_imu = IMU.DATAf(1:3,:)';
 omega_imu = IMU.DATAf(4:6,:)';
 omega_imu(:,3) = -omega_imu(:,3); %since we take yaw to be negative
 time_imu = double(IMU.times(:)-IMU.times(1))/10000;
-
+assignin('base','time_imu',time_imu);
 yaw_rate = -IMU.DATAf(6,:);% - mean( IMU.DATAf(6,1:5000))) );
 N_imu = length(time_imu);
 bias = -mean(IMU.DATAf(6,1:1000));
@@ -56,7 +56,7 @@ OOI.MeasuredBearings = [];
 speed = Vel.speeds;
 t= linspace(1,length(IMU.DATAf(1,:)),length(IMU.DATAf(1,:)));
 figure(7); clf;
-plot(t,speed);
+plot(time_imu,speed);
 
 %KALMAN VARS
 stdDevGyro = 2*pi/180; %deg2rad(1.4) ;%radians        
@@ -204,9 +204,9 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     end
     set(MyGUIHandles.plot2(1),'xdata',X(1:i),'ydata', Y(1:i));
     
-    J = [   [1,0,-dt*speed(i)*sin(Xe(3)),0];
+    J = [   [1,0,-dt*speed(i)*sin(Xe(3)),dt*];
             [0,1,dt*speed(i)*cos(Xe(3)),0]; 
-            [ 0,0,1,0 ];
+            [ 0,0,1,dt ];
             [ 0,0,0,1]] ;
     A = dt*[[speed(i)*cos(Xe(3)) 0];
             [speed(i)*sin(Xe(3)) 0];
@@ -261,12 +261,16 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
 	    ExpectedRange = eDD ;  
 	    ExpectedBearing = wrapToPi(atan2(eDY,eDX) - Xe(3) + pi/2)
         
-        OOI.MeasuredRanges = [OOI.MeasuredRanges, sqrt( (OOI.global.y(k) - Xe(1))^2 + ...
+        OOI.MeasuredRanges = [OOI.MeasuredRanges, sqrt( (OOI.global.x(k) - Xe(1))^2 + ...
                                 (OOI.global.y(k) - Xe(2))^2 ) ];
-        OOI.MeasuredBearings = [OOI.MeasuredBearings, atan2( (OOI.global.x(k) -Xe(1)),...
-                                (OOI.global.y(k) -Xe(2)))];
-                            
-	    z = [OOI.MeasuredRanges(k) - ExpectedRange; OOI.MeasuredBearings(k) - ExpectedBearing]; 
+        OOI.MeasuredBearings = [OOI.MeasuredBearings, wrapToPi(atan2( (OOI.global.y(k) -Xe(2) ),...
+                                                                       (OOI.global.x(k) -Xe(1) )))];
+%         OOI.MeasuredRanges = [OOI.MeasuredRanges, sqrt(local_OOI_list.Centers(1,j)^2 + ...
+%                             local_OOI_list.Centers(2,j)^2)];
+%         OOI.MeasuredBearings = [OOI.MeasuredBearings, atan2(OOI.local.y(k),...
+%                             OOI.local.x(k))];                    
+	    z = [OOI.MeasuredRanges(k) - ExpectedRange;
+            wrapToPi(OOI.MeasuredBearings(k) - ExpectedBearing)] 
 
 
 %	    disp(MeasuredBearings)
@@ -285,8 +289,8 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
         %P = P-P*H'*iS*H*P;%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
         P = P-K*H*P ;
         %set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
-        set(MyGUIHandles.plot3(2),'xdata',time_imu,'ydata', Xe_History(3,:));
-        set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,1:i),'ydata', Xe_History(2,1:i));
+        %set(MyGUIHandles.plot3(2),'xdata',time_imu(1:i),'ydata', Xe_History(3,1:i));
+        %set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,1:i),'ydata', Xe_History(2,1:i));
     end
     
     Xe_History(:,i) = Xe;
@@ -299,7 +303,7 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     %i=i+skip;
 end
     set(MyGUIHandles.plot6,'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
-    set(MyGUIHandles.plot6,'xdata',t,'ydata', Xe_History(3,:));
+    %set(MyGUIHandles.plot6,'xdata',t,'ydata', Xe_History(3,:));
     assignin('base', 'MyGUIHandles', MyGUIHandles);
     assignin('base', 'Xe_History', Xe_History);
     fprintf('\nDONE!\n');
@@ -310,7 +314,7 @@ end
 function Xnext=RunProcessModel(Xe,speed,GyroZ,dt) 
     Xnext =  Xe  +[(dt*speed*cos(Xe(3)));
                    (dt*speed*sin(Xe(3)));
-                   (GyroZ-Xe(4));
+                   dt*(GyroZ);
                    0] ;
 return ;
 end

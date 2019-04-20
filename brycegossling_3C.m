@@ -56,7 +56,7 @@ OOI.MeasuredBearings = [];
 speed = Vel.speeds;
 t= linspace(1,length(IMU.DATAf(1,:)),length(IMU.DATAf(1,:)));
 figure(7); clf;
-plot(t,speed);
+plot(time_imu,speed);
 
 %KALMAN VARS
 stdDevGyro = 2*pi/180; %deg2rad(1.4) ;%radians        
@@ -218,7 +218,7 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     Q1 = diag( [ (0.01)^2 ,...
                         (0.01)^2 ,...
                             (1*pi/180)^2,...
-                                0]) ;
+                                (1.2)^2]) ;
     Q = (Q1 + Q_u);
     P = J*P*J'+ Q ;
 
@@ -261,12 +261,16 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
 	    ExpectedRange = eDD ;  
 	    ExpectedBearing = wrapToPi(atan2(eDY,eDX) - Xe(3) + pi/2)
         
-        OOI.MeasuredRanges = [OOI.MeasuredRanges, sqrt( (OOI.global.y(k) - Xe(1))^2 + ...
+        OOI.MeasuredRanges = [OOI.MeasuredRanges, sqrt( (OOI.global.x(k) - Xe(1))^2 + ...
                                 (OOI.global.y(k) - Xe(2))^2 ) ];
         OOI.MeasuredBearings = [OOI.MeasuredBearings, wrapToPi(atan2( (OOI.global.y(k) -Xe(2) ),...
                                                                        (OOI.global.x(k) -Xe(1) )))];
-                            
-	    z = [OOI.MeasuredRanges(k) - ExpectedRange; OOI.MeasuredBearings(k) - ExpectedBearing]; 
+%         OOI.MeasuredRanges = [OOI.MeasuredRanges, sqrt(local_OOI_list.Centers(1,j)^2 + ...
+%                             local_OOI_list.Centers(2,j)^2)];
+%         OOI.MeasuredBearings = [OOI.MeasuredBearings, atan2(OOI.local.y(k),...
+%                             OOI.local.x(k))];                    
+	    z = [OOI.MeasuredRanges(k) - ExpectedRange;
+            wrapToPi(OOI.MeasuredBearings(k) - ExpectedBearing)] 
 
 
 %	    disp(MeasuredBearings)
@@ -299,7 +303,7 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     %i=i+skip;
 end
     set(MyGUIHandles.plot6,'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
-    set(MyGUIHandles.plot6,'xdata',t,'ydata', Xe_History(3,:));
+    %set(MyGUIHandles.plot6,'xdata',t,'ydata', Xe_History(3,:));
     assignin('base', 'MyGUIHandles', MyGUIHandles);
     assignin('base', 'Xe_History', Xe_History);
     fprintf('\nDONE!\n');
@@ -310,7 +314,7 @@ end
 function Xnext=RunProcessModel(Xe,speed,GyroZ,dt) 
     Xnext =  Xe  +[(dt*speed*cos(Xe(3)));
                    (dt*speed*sin(Xe(3)));
-                   (GyroZ-Xe(4));
+                   dt*(GyroZ);
                    0] ;
 return ;
 end
