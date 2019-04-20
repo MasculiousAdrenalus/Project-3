@@ -349,8 +349,8 @@ function Xnext=RunProcessModel(X,speed,GyroZ,dt)
 %     temp = X(4);
     Xnext = X + dt*[ speed*cos(X(3)) ;
                         speed*sin(X(3)) ; 
-                        %GyroZ-X(4); 
-                        GyroZ; 
+                        GyroZ-X(4); 
+%                         GyroZ; 
                         0; ] ;
 return ;
 
