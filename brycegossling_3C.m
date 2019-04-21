@@ -55,6 +55,9 @@ OOI.global.N = [];
 OOI.local.id = [];
 OOI.local.N = [];
 
+OOI.kalm = [];
+
+
 OOI.MeasuredRanges = [];
 OOI.MeasuredBearings = [];
 
@@ -113,7 +116,8 @@ grid on; hold on;
 MyGUIHandles.plot2 = plot(0,0,'m',...
                           0,0,'ro',...
                           0,0,'b+',...
-                          0,0,'g.');
+                          0,0,'g',...
+                          0,0,'g+');
 axis([-8,8,-8,8]);
 MyGUIHandles.plot2_title = title(''); 
 fprintf('\nThere are [ %d ] laser scans in this dataset (file [%s])\n',dataL.N,'Laser__2C.mat');
@@ -190,44 +194,47 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     if (ABCD.flagPause), pause(0.2) ; continue ; end;
     if i>=N_imu, break ;  end;
     dt = time_imu(i) - time_imu(i-1);
-%     Xe = RunProcessModel(Xe,speed(i-1),yaw_rate(i-1),dt) ;
-%     Xdr = RunProcessModel(Xdr,speed(i-1),yaw_rate(i-1),dt) ;
-    Xnext=Xdr;
-    Xnext(1) = speed(i)*cos(Xdr(3))*dt + Xdr(1);
-    Xnext(2) = speed(i)*sin(Xdr(3))*dt + Xdr(2);
-    Xnext(3) = (yaw_rate(i)-bias)*dt +   Xdr(3);
-    
-    Xdr = [Xnext(1); Xnext(2); Xnext(3)];
+%     Xnext=Xdr;
+%     Xnext(1) = speed(i)*cos(Xdr(3))*dt + Xdr(1);
+%     Xnext(2) = speed(i)*sin(Xdr(3))*dt + Xdr(2);
+%     Xnext(3) = (yaw_rate(i)-bias)*dt +   Xdr(3);
+%     Xdr = [Xnext(1); Xnext(2); Xnext(3)];    
+
+    Xdr = RunProcessModel(Xdr,speed(i), yaw_rate(i)-bias, dt);  
     X(i) = Xdr(1);
     Y(i) = Xdr(2);
     yaw(i) = Xdr(3);
-%     yaw(i) = dt*(yaw_rate(i-1)-bias) + yaw(i-1);
-%     X(i) = dt*speed(i-1) * cos(yaw(i-1)) + X(i-1);
-%     Y(i) = dt*speed(i-1) * sin(yaw(i-1)) + Y(i-1);    
-%     Xdr = [X(i); Y(i); yaw(i)];
     Xdr_History(:,i) = Xdr;
     
-    Xnext=Xe;
-    Xnext(1) = speed(i)*cos(Xe(3))*dt + Xe(1);
-    Xnext(2) = speed(i)*sin(Xe(3))*dt + Xe(2);
-    Xnext(3) = (yaw_rate(i)-bias)*dt +  Xe(3);
-    Xe = [Xnext(1); Xnext(2); Xnext(3)];
+    Xe = RunProcessModel(Xe,speed(i), yaw_rate(i)-bias, dt);   
+    
+    
+%     Xnext=Xe;
+%     Xnext(1) = speed(i)*cos(Xe(3))*dt + Xe(1);
+%     Xnext(2) = speed(i)*sin(Xe(3))*dt + Xe(2);
+%     Xnext(3) = (yaw_rate(i)-bias)*dt +  Xe(3);
+%     Xe = [Xnext(1); Xnext(2); Xnext(3)];
 
-%     yawk(i) =   dt*(yaw_rate(i-1)-bias) + yawk(i-1);
-%     Xk(i) =     dt*speed(i-1) * cos(yawk(i-1)) + Xk(i-1);
-%     Yk(i) =     dt*speed(i-1) * sin(yawk(i-1)) + Yk(i-1);
-%     Xe = [Xk(i); Yk(i); yawk(i);0];
     
     if ( (time_laser(j) < time_imu(i)) && (j<N_laser))
         scan_i = dataL.Scans(:,j);
         scan = ExtractScan(scan_i);
         r = ExtractOOI(scan.ranges, scan.intensity, MyGUIHandles); 
         %PlotScan(scan.ranges, scan.intensity, r, MyGUIHandles,j,time_laser(j));
+        
         OOI.local = ExtractOOIHR(r);
         alpha = yaw(i) - (pi/2);
         OOI.local = Transform(alpha, X(i), Y(i), OOI.local.x, OOI.local.y);
         set(MyGUIHandles.plot2(3),'xdata',OOI.local.x,'ydata', OOI.local.y);
         OOI = AssociateIOO(OOI, MyGUIHandles, j, time_laser(j),Xe);
+        
+        OOI.kalm = ExtractOOIHR(r);
+        [OOI.kalm.x OOI.kalm.y] = transform_coordinate(OOI.kalm.x, OOI.kalm.y, Xe);
+        set(MyGUIHandles.plot2(5),'xdata',OOI.kalm.x,'ydata', OOI.kalm.y);
+        %OOI.local = ExtractOOIHR(r);
+        %[OOI.local.x, OOI.local.y] = transform_coordinate(OOI.local.x, OOI.local.y,Xe);
+        %OOI = AssociateIOO(OOI, MyGUIHandles, j, time_laser(j),Xe);
+        
         j= j+1;
     end
     set(MyGUIHandles.plot2(1),'xdata',X(1:i),'ydata', Y(1:i));
@@ -250,7 +257,7 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     %P = J*P*J'+ Q ;
     
     Qu = Fu*P_u*Fu';
-P = J*P*J' + Q + Qu;
+    P = J*P*J' + Q + Qu;
     
     for k = 1:length(OOI.local.x)
         index = OOI.local.id(k);
@@ -309,11 +316,15 @@ P = J*P*J' + Q + Qu;
         %set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,1:i),'ydata', Xe_History(2,1:i));
     end
     fprintf("X before prediction\n")
-    disp(Xdr)
+    disp(Xdr')
     fprintf("X after prediction\n")
-    disp(Xe)
-    fprintf("z\n")
-    disp(z)
+    disp(Xe')
+    fprintf("OOI.local.x\n")
+    disp(OOI.local.x)
+    fprintf("OOI.kalman.x\n")
+    disp(OOI.kalm.x)
+%     fprintf("z\n")
+%     disp(z)
     Xe_History(:,i+1) = Xe;
     assignin('base','Xdr_History',Xdr_History);
     assignin('base','Xe_History',Xe_History);
@@ -338,15 +349,11 @@ function Xnext=RunProcessModel(Xe,speed,steering,dt)
 %     yaw(k) = yaw(k-1) + dt*(yaw_rate(k-1)-bias);
 %     X(k) = X(k-1) + dt*speed(k-1) * cos(yaw(k-1));
 %     Y(k) = Y(k-1) + dt*speed(k-1) * sin(yaw(k-1));
-    Xnext = zeros(4,1);
-    Xnext(3) =  dt*(steering)+ Xe(3);
-    Xnext(1) =  dt*speed*cos(Xnext(3))+Xe(1);
-    Xnext(2) =  dt*speed*sin(Xnext(3))+Xe(2);
-    Xnext(4) = 0;
-%     Xnext =        [(dt*speed*cos(Xe(3))+Xe(1));
-%                    (dt*speed*sin(Xe(3))+Xe(2));
-%                    dt*(steering)+Xe(3);
-%                    0] ;
+    Xnext=Xe;
+    Xnext(1) = speed*cos(Xe(3))*dt + Xe(1);
+    Xnext(2) = speed*sin(Xe(3))*dt + Xe(2);
+    Xnext(3) = (steering)*dt +  Xe(3);
+    %Xe = [Xnext(1); Xnext(2); Xnext(3)];
     return ;
 end
 %%
@@ -403,7 +410,8 @@ function [transformed_X, transformed_Y] = transform_coordinate(X, Y, state)
     YL = Y + 0.46;
     angle = (state(3) - pi/2);
     R = [cos(angle) -sin(angle); sin(angle) cos(angle)];
-    transform = R*[XL'; YL'];
+    temp = [XL; YL];
+    transform = R*temp;
     transformed_X = transform(1,:) + state(1);
     transformed_Y = transform(2,:) + state(2);
 end
