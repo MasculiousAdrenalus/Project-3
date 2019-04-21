@@ -6,7 +6,6 @@
 % MRTN4010 - S1.2018
 % Example using Extended Kalman Filter (EKF) for the localization problem, using LIDAR range observations.
 
-
 % Note#1:
 % For each "LIDAR scan" we extract the detected landmarks and then we use their ranges to update the estimated 
 % states (3DoF: 2D position and heading of the platform).  
@@ -70,6 +69,7 @@
 
 
 function main()
+qwerty = [];
 
 % .....................................................
 % Here I define the magnitude of the "noises", which I assume are present, 
@@ -231,6 +231,8 @@ for i=1:Li,     % loop
         
     % And, here, we calculate the predicted expected value. 
     Xe    = RunProcessModel(Xe,Noisy_speed,Noisy_GyroZ,Dt) ;
+    qwerty = [qwerty; Noisy_GyroZ;];
+    assignin('base', 'qwerty', qwerty);
     %  X(k+1|k) = f( X(k|k), u(k) )
     % in our case, we do not perfectly know u(k), but me measure them (which are noisy)
     % note: we reuse the same variable Xe (we do not need to remember X(k|k), so we overwrite it.)

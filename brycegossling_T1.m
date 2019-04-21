@@ -206,7 +206,7 @@ for i=1:Li,     % loop
     [nDetectedLandmarks,MeasuredRanges, MeasuredAngles, IDs]=GetObservationMeasurements();
     
     % if measurements are avaiable ==> we perform the related updates.
-    if nDetectedLandmarks>0,     % any laser data and detected landmarks?
+    if nDetectedLandmarks>0     % any laser data and detected landmarks?
      
         % Because there are available obsevations ==> I perform EKF update\updates.
    

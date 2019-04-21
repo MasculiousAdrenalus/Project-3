@@ -48,10 +48,10 @@ end
 % r.Sizes(:,find(r.N < 2)) = [];
 %gets rid of small Diameter objects
 
-r.Color(find(r.Sizes == -1)) = [];
+ r.Color(find(r.Sizes == -1)) = [];
 r.Centers(:,find(r.Sizes == -1)) = [];
-r.Sizes(find(r.Sizes == -1)) = [];
-r.N = length(r.Sizes);
+ r.Sizes(find(r.Sizes == -1)) = [];
+ r.N = length(r.Sizes);
 % assignin('base','edges',edges);
 
 return;
