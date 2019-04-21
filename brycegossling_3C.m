@@ -79,7 +79,7 @@ P_u = diag([stdDevGyro^2 stdDevSpeed^2]);
 R = diag([std_rangeMeasurement*std_rangeMeasurement*4,...
       std_angleMeasurement*std_angleMeasurement*4]);
 Xe = [ 0; 0; pi/2;0 ] ;  
-Xdr = [ 0; 0; pi/2;0 ] ;  
+Xdr = [ 0; 0; pi/2 ] ;  
 
 Xe_History = zeros(4,length(time_imu));
 Xe_History = zeros(4,length(time_imu));
@@ -110,7 +110,7 @@ hold off;
 
 figure(2); clf();
 grid on; hold on;
-MyGUIHandles.plot2 = plot(0,0,'m.',...
+MyGUIHandles.plot2 = plot(0,0,'m',...
                           0,0,'ro',...
                           0,0,'b+',...
                           0,0,'g.');
@@ -192,20 +192,31 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     dt = time_imu(i) - time_imu(i-1);
 %     Xe = RunProcessModel(Xe,speed(i-1),yaw_rate(i-1),dt) ;
 %     Xdr = RunProcessModel(Xdr,speed(i-1),yaw_rate(i-1),dt) ;
-
-    yaw(i) = dt*(yaw_rate(i-1)-bias) + yaw(i-1);
-    X(i) = dt*speed(i-1) * cos(yaw(i-1)) + X(i-1);
-    Y(i) = dt*speed(i-1) * sin(yaw(i-1)) + Y(i-1);
+    Xnext=Xdr;
     
-    Xdr = [X(i); Y(i); yaw(i)];
+    Xnext(3) = (yaw_rate(i)-bias)*dt +   Xdr(3);
+    Xnext(1) = speed(i)*cos(Xdr(3))*dt + Xdr(1);
+    Xnext(2) = speed(i)*sin(Xdr(3))*dt + Xdr(2);
+    Xdr = [Xnext(1); Xnext(2); Xnext(3)];
+    X(i) = Xdr(1);
+    Y(i) = Xdr(2);
+    yaw(i) = Xdr(3);
+%     yaw(i) = dt*(yaw_rate(i-1)-bias) + yaw(i-1);
+%     X(i) = dt*speed(i-1) * cos(yaw(i-1)) + X(i-1);
+%     Y(i) = dt*speed(i-1) * sin(yaw(i-1)) + Y(i-1);    
+%     Xdr = [X(i); Y(i); yaw(i)];
     Xdr_History(:,i) = Xdr;
     
-    
-    %X0 = Xe;
-    yawk(i) =   dt*(yaw_rate(i-1)-bias) + yawk(i-1);
-    Xk(i) =     dt*speed(i-1) * cos(yawk(i-1)) + Xk(i-1);
-    Yk(i) =     dt*speed(i-1) * sin(yawk(i-1)) + Yk(i-1);
-    Xe = [Xk(i); Yk(i); yawk(i);0];
+    Xnext=Xe;
+    Xnext(3) = (yaw_rate(i)-bias)*dt +  Xdr(3);
+    Xnext(1) = speed(i)*cos(Xe(3))*dt + Xdr(1);
+    Xnext(2) = speed(i)*sin(Xe(3))*dt + Xdr(2);
+    Xe = [Xnext(1); Xnext(2); Xnext(3); 0];
+
+%     yawk(i) =   dt*(yaw_rate(i-1)-bias) + yawk(i-1);
+%     Xk(i) =     dt*speed(i-1) * cos(yawk(i-1)) + Xk(i-1);
+%     Yk(i) =     dt*speed(i-1) * sin(yawk(i-1)) + Yk(i-1);
+%     Xe = [Xk(i); Yk(i); yawk(i);0];
     
     if ( (time_laser(j) < time_imu(i)) && (j<N_laser))
         scan_i = dataL.Scans(:,j);
@@ -256,7 +267,8 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
         eDD_L = sqrt( eDX_L*eDX_L + eDY_L*eDY_L ) ; 
         
         OOI.MeasuredRanges = eDD_L;
-        OOI.MeasuredBearings = wrapToPi(atan2(eDY_L,eDX_L) - Xe(3) + deg2rad(90));        
+        OOI.MeasuredBearings = wrapToPi(atan2(eDY_L,eDX_L) - Xe(3) + deg2rad(90));
+        
 	    ExpectedRange = eDD ;  
 	    ExpectedBearing = wrapToPi(atan2(eDY,eDX) - Xe(3) + deg2rad(90));
         

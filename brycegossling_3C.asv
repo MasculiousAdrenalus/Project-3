@@ -35,6 +35,7 @@ yawk = zeros(N_imu,1);
 Xk = zeros(N_imu,1);
 Yk = zeros(N_imu,1);
 yaw(1) = pi/2;
+yawk(1) = pi/2;
 % yaw_bias =  mean(yaw(1:4000));
 % yaw = yaw - yaw_bias;
 %laser data
@@ -78,7 +79,7 @@ P_u = diag([stdDevGyro^2 stdDevSpeed^2]);
 R = diag([std_rangeMeasurement*std_rangeMeasurement*4,...
       std_angleMeasurement*std_angleMeasurement*4]);
 Xe = [ 0; 0; pi/2;0 ] ;  
-Xdr = [ 0; 0; pi/2;0 ] ;  
+Xdr = [ 0; 0; pi/2 ] ;  
 
 Xe_History = zeros(4,length(time_imu));
 Xe_History = zeros(4,length(time_imu));
@@ -191,20 +192,30 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     dt = time_imu(i) - time_imu(i-1);
 %     Xe = RunProcessModel(Xe,speed(i-1),yaw_rate(i-1),dt) ;
 %     Xdr = RunProcessModel(Xdr,speed(i-1),yaw_rate(i-1),dt) ;
-
-    yaw(i) = dt*(yaw_rate(i-1)-bias) + yaw(i-1);
-    X(i) = dt*speed(i-1) * cos(yaw(i-1)) + X(i-1);
-    Y(i) = dt*speed(i-1) * sin(yaw(i-1)) + Y(i-1);
-    
-    Xdr = [X(i); Y(i); yaw(i)];
+    Xnext=Xdr;
+    Xnext(1) = speed(i)*cos(Xdr(3))*dt + Xdr(1);
+    Xnext(2) = speed(i)*sin(Xdr(3))*dt + Xdr(2);
+    Xnext(3) = yaw(i)*dt +          Xdr(3);
+    Xdr = [Xnext(1); Xnext(2); Xnext(3)];
+    X(i) = Xdr(1);
+    Y(i) = Xdr(2);
+    yaw(i) = Xdr(3);
+%     yaw(i) = dt*(yaw_rate(i-1)-bias) + yaw(i-1);
+%     X(i) = dt*speed(i-1) * cos(yaw(i-1)) + X(i-1);
+%     Y(i) = dt*speed(i-1) * sin(yaw(i-1)) + Y(i-1);    
+%     Xdr = [X(i); Y(i); yaw(i)];
     Xdr_History(:,i) = Xdr;
     
-    
+    Xnext=Xe;
+    Xnext(1) = speed(i)*cos(Xe(3))*dt + Xe(1);
+    Xnext(2) = speed(i)*sin(Xe(3))*dt + Xe(2);
+    Xnext(3) = yaw(i)*dt +          Xe(3);
+    X = [Xnext(1); Xnext(2); Xnext(3); 0];
     %X0 = Xe;
-    yaw(i) = yaw(i-1) + dt*(yaw_rate(i-1)-bias);
-    X(i) = X(i-1) + dt*speed(i-1) * cos(yaw(i-1));
-    Y(i) = Y(i-1) + dt*speed(i-1) * sin(yaw(i-1));
-    Xe = [X(i); Y(i); yaw(i);0];
+    yawk(i) =   dt*(yaw_rate(i-1)-bias) + yawk(i-1);
+    Xk(i) =     dt*speed(i-1) * cos(yawk(i-1)) + Xk(i-1);
+    Yk(i) =     dt*speed(i-1) * sin(yawk(i-1)) + Yk(i-1);
+    Xe = [Xk(i); Yk(i); yawk(i);0];
     
     if ( (time_laser(j) < time_imu(i)) && (j<N_laser))
         scan_i = dataL.Scans(:,j);
@@ -218,7 +229,7 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
         OOI = AssociateIOO(OOI, MyGUIHandles, j, time_laser(j),Xe);
         j= j+1;
     end
-    set(MyGUIHandles.plot2(1),'xdata',X(1:i),'ydata', Y(1:i));
+    set(MyGUIHandles.plot2(1),'xdata',X(1:i-1),'ydata', Y(1:i));
     
     J = [   [1,0,-dt*speed(i)*sin(Xe(3)),0];
             [0,1,dt*speed(i)*cos(Xe(3)),0]; 
@@ -289,7 +300,7 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
         Xe = Xe+K*z;        % update the  expected value
         %P = P-P*H'*iS*H*P;%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
         P = P-K*H*P ;
-        set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
+        %%%%%%%%set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
         %set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
         %set(MyGUIHandles.plot3(2),'xdata',time_imu(1:i),'ydata', Xe_History(3,1:i));
         %set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,1:i),'ydata', Xe_History(2,1:i));
