@@ -10,9 +10,9 @@ ABCD.flagPause=0;
 % if ~exist('file','var'), file ='DataForProject02/Laser__2C.mat'; load(file);end;
 % if ~exist('file','var'), file ='DataForProject02/IMU_dataC.mat'; load(file); end;
 % if ~exist('file','var'), file ='DataForProject02/Speed_dataC.mat'; load(file); end;
-load('DataForProject02/IMU_dataC.mat','IMU');
-load('DataForProject02/Speed_dataC.mat','Vel');
-load('DataForProject02/Laser__2C.mat', 'dataL');
+load('IMU_dataC.mat','IMU');
+load('Speed_dataC.mat','Vel');
+load('Laser__2C.mat', 'dataL');
 
 
 %imu setup init
@@ -113,7 +113,7 @@ grid on; hold on;
 MyGUIHandles.plot2 = plot(0,0,'m',...
                           0,0,'ro',...
                           0,0,'b+',...
-                          0,0,'g.');
+                          0,0,'g-');
 axis([-8,8,-8,8]);
 MyGUIHandles.plot2_title = title(''); 
 fprintf('\nThere are [ %d ] laser scans in this dataset (file [%s])\n',dataL.N,'Laser__2C.mat');
@@ -208,9 +208,9 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     Xdr_History(:,i) = Xdr;
     
     Xnext=Xe;
-    Xnext(1) = speed(i)*cos(Xe(3))*dt + Xe(1);
-    Xnext(2) = speed(i)*sin(Xe(3))*dt + Xe(2);
-    Xnext(3) = (yaw_rate(i)-bias)*dt +  Xe(3);
+    Xnext(1) = speed(i)*cos(Xe(3))*dt + Xdr(1);
+    Xnext(2) = speed(i)*sin(Xe(3))*dt + Xdr(2);
+    Xnext(3) = (yaw_rate(i)-bias)*dt +  Xdr(3);
     Xe = [Xnext(1); Xnext(2); Xnext(3)];
 
 %     yawk(i) =   dt*(yaw_rate(i-1)-bias) + yawk(i-1);
@@ -218,6 +218,13 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
 %     Yk(i) =     dt*speed(i-1) * sin(yawk(i-1)) + Yk(i-1);
 %     Xe = [Xk(i); Yk(i); yawk(i);0];
     
+
+%     if ( time_imu(i) < 20 && (time_imu(i) > time_laser(j)))
+%         j = j + 1;
+%     end 
+% 
+%     if  ( time_imu(i) > time_laser(j) && (j<N_laser) && time_imu(i) > 20)
+
     if ( (time_laser(j) < time_imu(i)) && (j<N_laser))
         scan_i = dataL.Scans(:,j);
         scan = ExtractScan(scan_i);
@@ -303,7 +310,7 @@ P = J*P*J' + Q + Qu;
         Xe = Xe+K*z;        % update the  expected value
         %P = P-P*H'*iS*H*P;%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
         P = P-K*H*P ;
-        set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
+        set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,1:i),'ydata', Xe_History(2,1:i));
         %set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
         %set(MyGUIHandles.plot3(2),'xdata',time_imu(1:i),'ydata', Xe_History(3,1:i));
         %set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,1:i),'ydata', Xe_History(2,1:i));
@@ -395,17 +402,6 @@ function result = Transform(alpha, Xr, Yr, X, Y)
     temp = temp + [Xr; Yr];
     result.x = temp(1,:);
     result.y = temp(2,:);
-end
-% ------------------------------------------------------------------------
-% part C functions (3): from Lab whiteboard
-function [transformed_X, transformed_Y] = transform_coordinate(X, Y, state)
-    XL = -X;
-    YL = Y + 0.46;
-    angle = (state(3) - pi/2);
-    R = [cos(angle) -sin(angle); sin(angle) cos(angle)];
-    transform = R*[XL'; YL'];
-    transformed_X = transform(1,:) + state(1);
-    transformed_Y = transform(2,:) + state(2);
 end
 %%
 function PlotScan(ranges, intensity, r, mh,i,t)

@@ -220,7 +220,7 @@ function P3_Z5077135_Lee_Aloysius(file)
         Xe = PredictVehiclePose(Xe, yaw(i), speed(i) ,Dt);
         
         
-        function X = PredictVehiclePose(X0,steering,speed,dt)
+                function X = PredictVehiclePose(X0,steering,speed,dt)
         % X = [x; y; heading]
         X=X0;
         X(1) = speed*cos(X0(3))*dt + X0(1);

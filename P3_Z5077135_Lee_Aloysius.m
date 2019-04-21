@@ -211,6 +211,8 @@ function P3_Z5077135_Lee_Aloysius(file)
         % ------------- run process model to do prediction ----------------
         Dt = IMUtimes(i+1) - IMUtimes(i);
         Xdr = PredictVehiclePose(Xdr, yaw(i), speed(i) ,Dt);
+        
+        
         % Add to history plot: overwritten if scan runs and OOi detected 
         XeDR_History(:,i+1) = Xdr;
 

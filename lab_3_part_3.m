@@ -6,7 +6,7 @@ function [] = lab_3_part_3()
 
 time_conv_factor = 10000;
 
-IMU_data = load('DataForProject02/IMU_dataB.mat');
+IMU_data = load('DataForProject02/IMU_dataC.mat');
 IMU_times = double(IMU_data.IMU.times)/time_conv_factor;
 IMU_accel = IMU_data.IMU.DATAf(1:3,:)';
 IMU_omega = IMU_data.IMU.DATAf(4:6,:)';
@@ -16,7 +16,7 @@ IMU_times = IMU_times - IMU_times(1);
 % 2D change of attitude representation
 IMU_omega(:,3) = -1*IMU_omega(:,3);
 
-speed_data = load('DataForProject02/Speed_dataB.mat');
+speed_data = load('DataForProject02/Speed_dataC.mat');
 velocity = speed_data.Vel.speeds;
 
 laser_data = load('DataForProject02/Laser__2.mat');

@@ -70,19 +70,19 @@ stdDevSpeed = 0.4;%0.4;%m/s
 std_rangeMeasurement = 0.16;%meters
 std_angleMeasurement = 1.1*pi/180;%radians
 
-P = zeros(4,4) ;
+P = zeros(3,3) ;
 %P(4,4) = (4*pi/180)^2; 
 
-Q = diag( [ (0.1)^2 ,(0.1)^2 , (2*pi/180)^2]) ;
+Q = diag( [ (0.1)^2 ,(0.1)^2 , (1*pi/180)^2]) ;
 P_u = diag([stdDevGyro^2 stdDevSpeed^2]);
 
 R = diag([std_rangeMeasurement*std_rangeMeasurement*4,...
       std_angleMeasurement*std_angleMeasurement*4]);
-Xe = [ 0; 0; pi/2;0 ] ;  
+Xe = [ 0; 0; pi/2;] ;  
 Xdr = [ 0; 0; pi/2 ] ;  
 
-Xe_History = zeros(4,length(time_imu));
-Xe_History = zeros(4,length(time_imu));
+Xe_History = zeros(3,length(time_imu));
+Xdr_History = zeros(3,length(time_imu));
   
 %%
 % --------------------------------------
@@ -193,10 +193,10 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
 %     Xe = RunProcessModel(Xe,speed(i-1),yaw_rate(i-1),dt) ;
 %     Xdr = RunProcessModel(Xdr,speed(i-1),yaw_rate(i-1),dt) ;
     Xnext=Xdr;
-    
-    Xnext(3) = (yaw_rate(i)-bias)*dt +   Xdr(3);
     Xnext(1) = speed(i)*cos(Xdr(3))*dt + Xdr(1);
     Xnext(2) = speed(i)*sin(Xdr(3))*dt + Xdr(2);
+    Xnext(3) = (yaw_rate(i)-bias)*dt +   Xdr(3);
+    
     Xdr = [Xnext(1); Xnext(2); Xnext(3)];
     X(i) = Xdr(1);
     Y(i) = Xdr(2);
@@ -208,10 +208,10 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     Xdr_History(:,i) = Xdr;
     
     Xnext=Xe;
-    Xnext(3) = (yaw_rate(i)-bias)*dt +  Xdr(3);
-    Xnext(1) = speed(i)*cos(Xe(3))*dt + Xdr(1);
-    Xnext(2) = speed(i)*sin(Xe(3))*dt + Xdr(2);
-    Xe = [Xnext(1); Xnext(2); Xnext(3); 0];
+    Xnext(1) = speed(i)*cos(Xe(3))*dt + Xe(1);
+    Xnext(2) = speed(i)*sin(Xe(3))*dt + Xe(2);
+    Xnext(3) = (yaw_rate(i)-bias)*dt +  Xe(3);
+    Xe = [Xnext(1); Xnext(2); Xnext(3)];
 
 %     yawk(i) =   dt*(yaw_rate(i-1)-bias) + yawk(i-1);
 %     Xk(i) =     dt*speed(i-1) * cos(yawk(i-1)) + Xk(i-1);
@@ -232,24 +232,25 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     end
     set(MyGUIHandles.plot2(1),'xdata',X(1:i),'ydata', Y(1:i));
     
-    J = [   [1,0,-dt*speed(i)*sin(Xe(3)),0];
-            [0,1,dt*speed(i)*cos(Xe(3)),0]; 
-            [ 0,0,1,0 ];
-            [ 0,0,0,1]] ;
+    J = [   [1,0,-dt*speed(i)*sin(Xe(3))];
+            [0,1,dt*speed(i)*cos(Xe(3))]; 
+            [ 0,0,1];];
     Fu = dt*[[speed(i)*cos(Xe(3)) 0];
             [speed(i)*sin(Xe(3)) 0];
-            [0 dt];
-            [0 0];];
+            [0 1];
+            ];
         
-        Q_u = Fu*(P_u)*Fu';
+        %Q_u = Fu*(P_u)*Fu';
     % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
-    Q1 = diag( [ (0.01)^2 ,...
-                        (0.01)^2 ,...
-                            (1*pi/180)^2,...
-                                0]) ;%(1.2)^2]) ;
-    Q = (Q1 + Q_u);
-    P = J*P*J'+ Q ;
-
+%     Q1 = diag( [ (0.01)^2 ,...
+%                         (0.01)^2 ,...
+%                             (1*pi/180)^2,...
+%                                 0]) ;%(1.2)^2]) ;
+%     Q = (Q1 + Q_u);
+    %P = J*P*J'+ Q ;
+    
+    Qu = Fu*P_u*Fu';
+P = J*P*J' + Q + Qu;
     
     for k = 1:length(OOI.local.x)
         index = OOI.local.id(k);
@@ -282,8 +283,8 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
 %                             OOI.local.x(k))];                    
 
 	    % New 2D measurement matrix:
-	    H = [[  -eDX/eDD , -eDY/eDD , 0 ,0]; 
-		 [eDY/(eDD^2), -eDX/(eDD^2), -1,0]];
+	    H = [[  -eDX/eDD , -eDY/eDD , 0 ]; 
+		 [eDY/(eDD^2), -eDX/(eDD^2), -1 ]];
 
      
         z = [OOI.MeasuredRanges - ExpectedRange;
@@ -311,6 +312,8 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     disp(Xdr)
     fprintf("X after prediction\n")
     disp(Xe)
+    fprintf("z\n")
+    disp(z)
     Xe_History(:,i+1) = Xe;
     assignin('base','Xdr_History',Xdr_History);
     assignin('base','Xe_History',Xe_History);
@@ -360,7 +363,7 @@ function OOI = AssociateIOO(OOI, H, t,q, Xe)
        [dist_min,id] = min(dist);
        OOI.local.id(i) = id;
         assignin('base','dist', dist);
-        if dist_min < 0.4
+        if dist_min < 0.5
             OOI.local.id(i) = id;
             set(H.labels(i),...
             'position',[OOI.local.x(i)-1,OOI.local.y(i)-0.5],...
@@ -375,11 +378,11 @@ function OOI = AssociateIOO(OOI, H, t,q, Xe)
             'String','');
         end
     end
-    for i = OOI.local.N+1:length(H.labels)
-        set(H.labels(i),...
-        'position',[0,0],...
-        'String','');
-    end
+%     for i = OOI.local.N+1:length(H.labels)
+%         set(H.labels(i),...
+%         'position',[0,0],...
+%         'String','');
+%     end
     s= sprintf('Laser scan # [%d] at time [%.3f] secs',t,q);
     set(H.plot2_title,'string',s);
 
@@ -392,6 +395,17 @@ function result = Transform(alpha, Xr, Yr, X, Y)
     temp = temp + [Xr; Yr];
     result.x = temp(1,:);
     result.y = temp(2,:);
+end
+% ------------------------------------------------------------------------
+% part C functions (3): from Lab whiteboard
+function [transformed_X, transformed_Y] = transform_coordinate(X, Y, state)
+    XL = -X;
+    YL = Y + 0.46;
+    angle = (state(3) - pi/2);
+    R = [cos(angle) -sin(angle); sin(angle) cos(angle)];
+    transform = R*[XL'; YL'];
+    transformed_X = transform(1,:) + state(1);
+    transformed_Y = transform(2,:) + state(2);
 end
 %%
 function PlotScan(ranges, intensity, r, mh,i,t)
