@@ -15,8 +15,8 @@ cluster = [];
 
 angles = [0:360]'*0.5* pi/180 ;         % associated angle, for each individual range in a scan
 %angles = dataL.angles;
-Xpos = -cos(angles).*ranges;
-Ypos = sin(angles).*ranges+0.46;
+Xpos = cos(angles).*ranges;
+Ypos = sin(angles).*ranges;
 
 %find the gaps
 edges = [0 (find(sqrt(diff(Xpos).^2+diff(Ypos).^2) > 0.15))'];
