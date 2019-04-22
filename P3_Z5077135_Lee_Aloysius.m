@@ -385,6 +385,15 @@ function P3_Z5077135_Lee_Aloysius(file)
                         HHH = [-eDX/eDD   , -eDY/eDD      , 0 ;
                                eDY/(eDD^2), -eDX/(eDD^2)  , -1];  
 
+    %                     %     % For Modifying the Observation Function H to account for the laser
+    %                     %     % displacement 
+    %                     % new Jacobian
+    %                     xa = GlobalOOI(1,c);
+    %                     ya = GlobalOOI(2,c);
+    %                     x = Xe(1);
+    %                     y = Xe(2);
+    %                     heading_ang = Xe(3);
+    %                     HHH = eval(subs(H));
 
                         %------------ GG BREAKPOINT
                         z  = [MeasuredRanges - ExpectedRange ; wrapToPi(MeasuredBearings - ExpectedAngle) ];
