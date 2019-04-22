@@ -313,22 +313,56 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
                 end
              end
         else
-            OOI.MeasuredRanges
-            H = [[  -eDX/eDD , -eDY/eDD , 0 ]; 
-            [eDY/(eDD^2), -eDX/(eDD^2), -1 ]];
-            z = [OOI.MeasuredRanges - ExpectedRange;
-            wrapToPi(OOI.MeasuredBearings - ExpectedBearing)];
-            % ------ covariance of the noise/uncetainty in the measurements
-            R = diag([std_rangeMeasurement*std_rangeMeasurement*4,...
-            std_angleMeasurement*std_angleMeasurement*4]);
-            % Some intermediate steps for the EKF (as presented in the lecture notes)
-            S = R + H*P*H' ;
-            iS = inv(S);%iS=1/S;                 % iS = inv(S) ;   % in this case S is 1x1 so inv(S) is just 1/S
-            K = P*H'*iS ;           % Kalman gain7
-            % ----- finally, we do it...We obtain  X(k+1|k+1) and P(k+1|k+1)
-            Xe = Xe+K*z;        % update the  expected value
-            %P = P-P*H'*iS*H*P;%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
-            P = P-K*H*P ;
+            x_G = OOI.global.x(num1);
+            y_G = OOI.global.y(num1);
+            x_L = OOI.kalm.x(num2);
+            y_L = OOI.kalm.y(num2);
+            dist = sqrt((x_G - x_L)^2 + (y_G - y_L)^2);
+            if dist < 0.4 
+
+                point(num2)=num1;
+
+                eDX = (x_G-Xe(1)) ;      % (xu-x)
+                eDY = (y_G-Xe(2)) ;      % (yu-y)
+                eDD = sqrt( eDX^2 + eDY^2 ) ; 
+
+                eDX_L = (x_L-Xe(1)) ;      % (xu-x)
+                eDY_L = (y_L-Xe(2)) ;      % (yu-y)
+                eDD_L = sqrt( eDX_L^2 + eDY_L^2 ) ; 
+
+                OOI.MeasuredRanges = eDD_L;
+                OOI.MeasuredBearings = wrapToPi(atan2(eDY_L,eDX_L) - Xe(3) + deg2rad(90));
+
+                ExpectedRange = eDD ;  
+                ExpectedBearing = (atan2(eDY,eDX) - Xe(3) + deg2rad(90));
+                % New 2D measurement matrix:
+                H = [[  -eDX/eDD , -eDY/eDD , 0 ]; 
+                 [eDY/(eDD^2), -eDX/(eDD^2), -1 ]];
+                z = [OOI.MeasuredRanges - ExpectedRange;
+                wrapToPi(OOI.MeasuredBearings - ExpectedBearing)];
+                % ------ covariance of the noise/uncetainty in the measurements
+                R = diag([std_rangeMeasurement*std_rangeMeasurement*4,...
+                      std_angleMeasurement*std_angleMeasurement*4]);
+                % Some intermediate steps for the EKF (as presented in the lecture notes)
+                S = R + H*P*H' ;
+                iS = inv(S);%iS=1/S;                 % iS = inv(S) ;   % in this case S is 1x1 so inv(S) is just 1/S
+                K = P*H'*iS ;           % Kalman gain7
+                % ----- finally, we do it...We obtain  X(k+1|k+1) and P(k+1|k+1)
+                Xe = Xe+K*z;        % update the  expected value
+                %P = P-P*H'*iS*H*P;%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
+                P = P-K*H*P ;
+
+                fprintf("X before prediction\n")
+                disp(Xdr')
+                fprintf("X after prediction\n")
+                disp(Xe')
+                fprintf("OOI.local.x\n")
+                disp(OOI.local.x)
+                fprintf("OOI.kalman.x\n")
+                disp(OOI.kalm.x)
+                fprintf("z\n")
+                disp(z)
+            end
             Xe = Xdr;
         end
          j= j+1;
