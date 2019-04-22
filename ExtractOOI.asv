@@ -29,10 +29,9 @@ for i = 1:r.N
     cluster = [cluster_X cluster_Y];
     temp = [cluster_X(1) cluster_Y(1) ; cluster_X(end) cluster_Y(end)];
     r.Sizes(i) = pdist(temp,'euclidean');%norm(range(cluster_X),range(cluster_Y));
-    r.Sizes(i) = r.Sizes(i)/2;
+    r.Sizes(i) = 
     r.Centers(:,i) = [mean(cluster_X),mean(cluster_Y)];
     if (r.Sizes(i) < 0.05 || r.Sizes(i) > 0.2 )
-    %if (r.Sizes(i) > 0.2 )
         r.Sizes(i) = -1;
     end
     temp = [];
