@@ -243,17 +243,13 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
         set(MyGUIHandles.plot2(3),'xdata',OOI.local.x,'ydata', OOI.local.y);
         ID = [];
         ID = AssociateIOO(OOI, MyGUIHandles, j, time_laser(j),Xe);
-        fprintf("local: ")
-        disp(ID.local.id')
+        disp(ID.local.id)
         %[OOI.kalm.x OOI.kalm.y] = transform_coordinate(OOI.kalm.x, OOI.kalm.y, Xe);
         set(MyGUIHandles.plot2(5),'xdata',OOI.kalm.x,'ydata', OOI.kalm.y);
         %OOI.local = ExtractOOIHR(r);
         %[OOI.local.x, OOI.local.y] = transform_coordinate(OOI.local.x, OOI.local.y,Xe);
         %OOI = AssociateIOO(OOI, MyGUIHandles, j, time_laser(j),Xe);
-        fprintf("kalm ")
-        %OOI.kalm.id = zeros(1,length(OOI.kalm.x));
-        
-        
+        OOI.kalm.id = zeros(1,length(OOI.kalm.x));
         
         if (isempty(OOI.kalm.x) < 1)
             point=zeros(1,length(OOI.global.x));
@@ -261,15 +257,15 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
                 for num1 = 1:length(OOI.global.x)
                     x_G = OOI.global.x(num1);
                     y_G = OOI.global.y(num1);
-                    x_L = OOI.kalm.x(num2);
-                    y_L = OOI.kalm.y(num2);
+                    x_L = OOI.local.x(num2);
+                    y_L = OOI.local.y(num2);
                     dist = sqrt((x_G - x_L)^2 + (y_G - y_L)^2);
                     if dist < 0.4 
-                        OOI.kalm.id(num2) = ID.local.id();
+                    OOI.local.id(num2) = num1;
                     end
                 end
             end
-            disp(OOI.kalm.id)
+            disp(OOI.local.id)
                          
              for num2 = 1:length(OOI.kalm.x)
                 %index = OOI.local.id(k);
@@ -322,33 +318,24 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
                         %P = P-P*H'*iS*H*P;%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
                         P = P-K*H*P ;
 
-%                         fprintf("X before prediction\n")
-%                         disp(Xdr')
-%                         fprintf("X after prediction\n")
-%                         disp(Xe')
-%                         fprintf("OOI.local.x\n")
-%                         disp(OOI.local.x)
-%                         fprintf("OOI.kalman.x\n")
-%                         disp(OOI.kalm.x)
-%                         fprintf("z\n")
-%                         disp(z)
+                        fprintf("X before prediction\n")
+                        disp(Xdr')
+                        fprintf("X after prediction\n")
+                        disp(Xe')
+                        fprintf("OOI.local.x\n")
+                        disp(OOI.local.x)
+                        fprintf("OOI.kalman.x\n")
+                        disp(OOI.kalm.x)
+                        fprintf("z\n")
+                        disp(z)
                     else
-                        for foo2 = 1:length(OOI.local.x)
-                            for foo1 = 1:length(OOI.global.x)
-                                x_G = OOI.global.x(foo1);
-                                y_G = OOI.global.y(foo1);
-                                x_L = OOI.local.x(foo2);
-                                y_L = OOI.local.y(foo2);
-                                dist = sqrt((x_G - x_L)^2 + (y_G - y_L)^2);
-                                if (dist <0.4)
-                                    if 
-                                end
-                            end
-                        end
+                        
+                    
+                    end
                 end
              end
-             end
-        else
+        end
+        if (isempty(OOI.kalm.x) == 0) && (isempty(OOI.local.x) == 1)
             for num2 = 1:length(OOI.kalm.x)
             for num1 = 1:length(OOI.global.x)
                 x_G = OOI.global.x(num1);
@@ -390,16 +377,16 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
                     %P = P-P*H'*iS*H*P;%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
                     P = P-K*H*P ;
 
-%                     fprintf("X before prediction\n")
-%                     disp(Xdr')
-%                     fprintf("X after prediction\n")
-%                     disp(Xe')
-%                     fprintf("OOI.local.x\n")
-%                     disp(OOI.local.x)
-%                     fprintf("OOI.kalman.x\n")
-%                     disp(OOI.kalm.x)
-%                     fprintf("z\n")
-%                     disp(z)
+                    fprintf("X before prediction\n")
+                    disp(Xdr')
+                    fprintf("X after prediction\n")
+                    disp(Xe')
+                    fprintf("OOI.local.x\n")
+                    disp(OOI.local.x)
+                    fprintf("OOI.kalman.x\n")
+                    disp(OOI.kalm.x)
+                    fprintf("z\n")
+                    disp(z)
                 end
             end
             end
@@ -457,12 +444,12 @@ function OOI = AssociateIOO(OOI, H, t,q, Xe)
        [dist_min,id] = min(dist);
        OOI.local.id(i) = id;
         assignin('base','dist', dist);
-        if dist_min < 0.4
+        if dist_min < 0.5
             OOI.local.id(i) = id;
 %             set(H.labels(i),...
 %             'position',[OOI.local.x(i)-1,OOI.local.y(i)-0.5],...
 %             'String',['id: #',num2str(id),', Error: ', num2str(dist_min), ' m']);
-%         
+        
 
             %OOI.ObservedLandmarks = [ObservedLandmarks, local_OOI_list.global_ID(j)];
             %num_measurements = num_measurements + 1;
