@@ -72,18 +72,18 @@ stdDevSpeed = 0.4;%0.4;%m/s
 std_rangeMeasurement = 0.16;%meters
 std_angleMeasurement = 1.1*pi/180;%radians
 
-P = zeros(4,4) ;
+P = zeros(5,5) ;
 P(4,4) = (4*pi/180); 
 
-Q = diag( [ (0.005)^2 ,(0.005)^2 , (0.005*pi/180)^2, (0.005*pi/180*(1/600))^2,] ) ;
-P_u = diag([stdDevGyro^2 stdDevSpeed^2]);
+Q = diag( [ (0.005)^2 ,(0.005)^2 , (0.005*pi/180)^2, (0.005*pi/180*(1/600))^2, (0.005*1.5)^2] ) ;
+P_u = diag([stdDevGyro^2]);
 % ------ covariance of the noise/uncetainty in the measurements
 R = diag([std_rangeMeasurement*std_rangeMeasurement*4,...
       std_angleMeasurement*std_angleMeasurement*4]);
-Xe = [ 0; 0; pi/2; 0] ;  
+Xe = [ 0; 0; pi/2; 0; 0] ;  
 Xdr = [ 0; 0; pi/2; 0] ;  
 
-Xe_History = zeros(4,length(time_imu));
+Xe_History = zeros(5,length(time_imu));
 Xdr_History = zeros(4,length(time_imu));
   
 %%
@@ -123,19 +123,17 @@ MyGUIHandles.plot2_title = title('');
 fprintf('\nThere are [ %d ] laser scans in this dataset (file [%s])\n',dataL.N,'Laser__2C.mat');
 MyGUIHandles.labels = text(zeros(1,5),zeros(1,5),'','Color','k'); 
 hold off;
-% figure(3); clf();
-% grid on; hold on;
-% MyGUIHandles.plot3 = plot(0,0,'b.',...
-%                           0,0,'r.',...
-%                           0,0,'go',...
-%                           0,0,'m+');  
-% hold off;
+figure(3); clf();
+grid on; hold on; zoom on;
+MyGUIHandles.plot3 = plot(0,0,'b',...
+                          0,0,'r');
+hold off;
 % figure(4); clf();
 % grid on; hold on;
-% MyGUIHandles.plot4 = plot(0,0,'b.',...
+% MyGUIHandles.plot4 = plot(0,0,'b',...
 %                           0,0,'r.',...
-%                           0,0,'go',...
-%                           0,0,'m+'); 
+%                           0,0,'g',...
+%                           0,0,'m'); 
 % hold off;
 % figure(5); clf();
 % grid on; hold on;
@@ -189,24 +187,22 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     
     dt = time_imu(i) - time_imu(i-1);
     
-    J = [   [1,0,-dt*speed(i)*sin(Xe(3))];
-            [0,1,dt*speed(i)*cos(Xe(3))]; 
-            [0,0,1]; ];
-    Fu =    [
-            [dt*cos(Xe(3)) 0];
-            [dt*sin(Xe(3)) 0];
-            [0 dt];
-            ];    
+    J = [   1,0,-dt*Xe(5)*sin(Xe(3)),0,cos(Xe(3));
+            0,1,dt*Xe(5)*cos(Xe(3)),0,sin(Xe(3)); 
+            0,0,1,-dt, 0;
+            0,0,0,1,0;
+            0,0,0,0,1];
+    Fu =    [0;0;dt;0;0]; 
     Qu = Fu*P_u*Fu';
     P = J*P*J' + Q + Qu;
     
-    Xdr = RunProcessModel(Xdr,speed(i), yaw_rate(i)-bias, dt);  
+%     Xdr = RunProcessModel(Xdr,speed(i), yaw_rate(i)-bias, dt);  
     X(i) = Xdr(1);
     Y(i) = Xdr(2);
     yaw(i) = Xdr(3);
-    Xdr_History(:,i) = Xdr;
+%     Xdr_History(:,i) = Xdr;
     
-    Xe = RunProcessModel(Xe,speed(i), yaw_rate(i)-bias, dt);
+    Xe = RunProcessModel(Xe,speed(i), yaw_rate(i), dt);
     
     
     %if i > 4001 %skips to when it starts mooving
@@ -230,12 +226,12 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
         
         set(MyGUIHandles.plot2(3),'xdata',OOI.local.x,'ydata', OOI.local.y);
 
-        ID = AssociateIOO(OOI, MyGUIHandles, j, time_laser(j),Xe);
+%        ID = AssociateIOO(OOI, MyGUIHandles, j, time_laser(j),Xe);
         set(MyGUIHandles.plot2(5),'xdata',OOI.kalm.x,'ydata', OOI.kalm.y);
         OOI.local = ExtractOOIHR(r);
         
-        OOI.kalm.id = zeros(1,length(OOI.local.x));
-        OOI.kalm.id = ID.local.id;
+%        OOI.kalm.id = zeros(1,length(OOI.local.x));
+%        OOI.kalm.id = ID.local.id;
         if (isempty(OOI.kalm.x) < 1)
              for num2 = 1:length(OOI.kalm.x)
                 for num1 = 1:length(OOI.global.x)
@@ -262,8 +258,8 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
                         ExpectedRange = eDD ;  
                         ExpectedBearing = (atan2(eDY,eDX) - Xe(3) + deg2rad(90));
                         % New 2D measurement matrix:
-                        H = [[  -eDX/eDD , -eDY/eDD , 0 ]; 
-                         [eDY/(eDD^2), -eDX/(eDD^2), -1 ]];
+                        H = [[  -eDX/eDD , -eDY/eDD , 0, 0, 0]; 
+                         [eDY/(eDD^2), -eDX/(eDD^2), -1, 0, 0 ]];
                         z = [OOI.MeasuredRanges - ExpectedRange;
                         wrapToPi(OOI.MeasuredBearings - ExpectedBearing)];
 
@@ -286,23 +282,23 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
 %                         disp(OOI.kalm.x)
 %                         fprintf("z\n")
 %                         disp(z)
-                    else
-                        [smallest id] = min(OOI.kalm.id);
-                        if (smallest == 0)
-                            
-                        end                     
+                    
                     end
                 end
              end
         end
+        assignin('base', 'Xe_History', Xe_History);
          j= j+1;
     end
    set(MyGUIHandles.plot2(1),'xdata',X(1:i),'ydata', Y(1:i));
-   set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,:),'ydata', Xe_History(2,:));
+   set(MyGUIHandles.plot2(4),'xdata',Xe_History(1,1:i),'ydata', Xe_History(2,1:i));
+%    set(MyGUIHandles.plot4(4),'xdata',time_imu(1:i),'ydata', Xe_History(5,1:i));
+%    set(MyGUIHandles.plot4(1),'xdata',time_imu(1:i),'ydata', speed(1:i));
+   %set(MyGUIHandles.plot3(1),'xdata',time_imu(1:i),'ydata',rad2deg(Xe_History(4,1:i)));
     
     Xe_History(:,i+1) = Xe;
 
-  
+    
     pause(0.0001);
     %i=i+skip;
 end
@@ -314,9 +310,11 @@ end
 %%
 function Xnext=RunProcessModel(Xe,speed,steering,dt)
     Xnext=Xe;
-    Xnext(1) = speed*cos(Xe(3))*dt + Xe(1);
-    Xnext(2) = speed*sin(Xe(3))*dt + Xe(2);
-    Xnext(3) = (steering)*dt +  Xe(3);
+    Xnext(1) = Xe(5)*cos(Xe(3))*dt + Xe(1);
+    Xnext(2) = Xe(5)*sin(Xe(3))*dt + Xe(2);
+    Xnext(3) = (steering-Xe(4))*dt + Xe(3);
+    Xnext(4) = Xe(4);
+    Xnext(5) = Xe(5);
     return ;
 end
 %%
