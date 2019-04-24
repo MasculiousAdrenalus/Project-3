@@ -1,7 +1,7 @@
 %Author: <Bryce Gossling>, Z3424655
 
 %Program: Solution for AAS, S1.2018, Project2
-function brycegossling_3C()
+function brycegossling_3D()
 % close all;
 global ABCD;
 ABCD.flagPause=0;
@@ -75,16 +75,16 @@ std_angleMeasurement = 1.1*pi/180;%radians
 P = zeros(3,3) ;
 %P(4,4) = (4*pi/180)^2; 
 
-Q = diag( [ (0.1)^2 ,(0.1)^2 , (1*pi/180)^2]) ;
+Q = diag( [ (0.005)^2 ,(0.005)^2 , (0.005*pi/180)^2, (0.005*pi/180*(1/600))^2]) ;
 P_u = diag([stdDevGyro^2 stdDevSpeed^2]);
 
 R = diag([std_rangeMeasurement*std_rangeMeasurement*4,...
       std_angleMeasurement*std_angleMeasurement*4]);
-Xe = [ 0; 0; pi/2;] ;  
-Xdr = [ 0; 0; pi/2 ] ;  
+Xe = [ 0; 0; pi/2; 0] ;  
+Xdr = [ 0; 0; pi/2; 0] ;  
 
-Xe_History = zeros(3,length(time_imu));
-Xdr_History = zeros(3,length(time_imu));
+Xe_History = zeros(4,length(time_imu));
+Xdr_History = zeros(4,length(time_imu));
   
 %%
 % --------------------------------------
@@ -201,10 +201,11 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
     
     dt = time_imu(i) - time_imu(i-1);
     
-    J = [   [1,0,-dt*speed(i)*sin(Xe(3))];
-            [0,1,dt*speed(i)*cos(Xe(3))]; 
-            [0,0,1]; ];
-    Fu =    [
+    J = [   [1,0,-dt*speed(i)*sin(Xe(3)), 0];
+            [0,1,dt*speed(i)*cos(Xe(3)), 0]; 
+            [0,0,1,-dt];
+            [0,0,0,1]];
+    Fu =    [   
             [dt*cos(Xe(3)) 0];
             [dt*sin(Xe(3)) 0];
             [0 dt];
@@ -249,8 +250,8 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
         %OOI.local = ExtractOOIHR(r);
         %[OOI.local.x, OOI.local.y] = transform_coordinate(OOI.local.x, OOI.local.y,Xe);
         %OOI = AssociateIOO(OOI, MyGUIHandles, j, time_laser(j),Xe);
-        OOI.kalm.id = zeros(1,length(OOI.kalm.x));
-        
+        OOI.kalm.id = zeros(1,length(OOI.local.x));
+        OOI.kalm.id = ID.local.id;
         if (isempty(OOI.kalm.x) < 1)
             point=zeros(1,length(OOI.global.x));
             for num2 = 1:length(OOI.local.x)
@@ -329,14 +330,16 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
                         fprintf("z\n")
                         disp(z)
                     else
-                        
-                    
+                        [smallest id] = min(OOI.kalm.id);
+                        if (smallest == 0)
+                            
+                        end                     
                     end
                 end
              end
-        end
-        if (isempty(OOI.kalm.x) == 0) && (isempty(OOI.local.x) == 1)
-            for num2 = 1:length(OOI.kalm.x)
+        else
+        if (isempty(OOI.kalm.x) == 0)
+            for num2 = 1:length(OOI.local.x)
             for num1 = 1:length(OOI.global.x)
                 x_G = OOI.global.x(num1);
                 y_G = OOI.global.y(num1);
@@ -390,6 +393,7 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
                 end
             end
             end
+        end
         Xe = Xdr;
         end
          j= j+1;

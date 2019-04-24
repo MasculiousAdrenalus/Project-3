@@ -185,25 +185,26 @@ stdDevSpeed = 0.4 ;
 sdev_rangeMeasurement = 0.16;
 sdev_bearingMeasurement = 1.1*pi/180; 
 
-Xe = [0; 0; pi/2; 0]; 
+Xe = [0; 0; pi/2; 0; 0]; 
 Xdr = [0; 0; pi/2; -bias*(pi/180)];
-P = zeros(4,4);
+P = zeros(5,5);
 P(4,4) = 4*pi/180;
 
-Xe_History= zeros(4,length(times)) ;
+Xe_History= zeros(5,length(times)) ;
 Xdr_History= zeros(4,length(times)) ;
 
-Q = diag( [ (0.005)^2 ,(0.005)^2 , (0.005*pi/180)^2, (0.005*pi/180*(1/600))^2]) ;
-Pu = diag([stdDevSpeed^2,stdDevGyro^2]);
-initial_state = [0 0 pi/2 0]; %Initial x, y, theta, bias
+Q = diag( [ (0.005)^2 ,(0.005)^2 , (0.005*pi/180)^2, (0.005*pi/180*(1/600))^2, (0.005*1.5)^2]) ;
+%Pu = diag([stdDevSpeed^2,stdDevGyro^2]);
+Pu = diag([stdDevGyro^2]);
+initial_state = [0 0 pi/2 0 0]; %Initial x, y, theta, bias
 
-state = zeros(length(times),4);
+state = zeros(length(times),5);
 
 state(1,:) = initial_state;
 
 for i = 1:length(times)-1
 	dt = (times(i+1) - times(i))/10000;
-    state(i+1,:) = RunProcessModel(velocity(i),wz_unbias(i)*(pi/180),dt,state(i,:));
+    state(i+1,:) = RunProcessModel_ekf(wz_unbias(i)*(pi/180),dt,state(i,:));
 end
 
 %use OOIs_initial.Centers(POI,:)
@@ -228,15 +229,18 @@ for counter1 = 2:length(IMU_times)-1
     point = [];
     num_measurements = 0;
     
-    J = [[1,0,-dt*speed*sin(Xe(3)),0];
-        [0,1,dt*speed*cos(Xe(3)),0];
-        [0,0,1,-dt];
-        [0,0,0,1]]; 
-    Ju = [dt*cos(Xe(3)), 0; dt*sin(Xe(3)), 0; 0, dt; 0, 0];
+    J = [[1,0,-dt*Xe(5)*sin(Xe(3)),0,cos(Xe(3))];
+        [0,1,dt*Xe(5)*cos(Xe(3)),0,sin(Xe(3))];
+        [0,0,1,-dt,0];[0,0,0,1,0];
+        [0,0,0,0,1]]; 
+   % Ju = [dt*cos(Xe(3)), 0; dt*sin(Xe(3)), 0; 0, dt; 0, 0];
+   Ju = [0;0;dt;0;0];
     
     P = J*P*J'+(Ju*Pu*Ju')+Q ;
-    Xe = RunProcessModel(speed,gyro,dt,Xe)';
-    Xdr = RunProcessModel(speed,gyro,dt,Xdr)';
+    Xe = RunProcessModel_ekf(gyro,dt,Xe)';
+    Xdr = RunProcessModel_dr(speed,gyro,dt,Xdr)';
+    
+    disp([speed Xe(5)]);
     
     if (IMU_times(counter1) > Laser_times(counter2) && counter2 < length(Laser_times))
         
@@ -269,8 +273,8 @@ for counter1 = 2:length(IMU_times)-1
                             eDD = sqrt( eDX*eDX + eDY*eDY ) ; 
 	
                 % New 2D measurement matrix:
-                            H = [[  -eDX/eDD , -eDY/eDD , 0, 0 ]; 
-                            [eDY/(eDD^2), -eDX/(eDD^2), -1, 0]];
+                            H = [[  -eDX/eDD , -eDY/eDD , 0, 0, 0 ]; 
+                            [eDY/(eDD^2), -eDX/(eDD^2), -1, 0, 0]];
 
                             ExpectedRange = eDD ;  
                             ExpectedBearing = (atan2(eDY,eDX) - Xe(3) + pi/2);
@@ -290,7 +294,7 @@ for counter1 = 2:length(IMU_times)-1
                             z_History(:,k) = z;
                             k = k+1;
         %disp(max(z_History(:)));
-                            disp(iS);
+                      %      disp(iS);
                         end
                     end
                 end
@@ -301,27 +305,15 @@ for counter1 = 2:length(IMU_times)-1
        
         end
     counter2 = counter2+1; 
-    local_posX = [  Xe(1)+0.1*cos(Xe(3)-pi/2),...
-                    Xe(1)-0.1*cos(Xe(3)-pi/2),...
-                    Xe(1)+(hypot(0.46,0.1)*cos(Xe(3)+atan(0.1/0.46))),...
-                     Xe(1)+(hypot(0.46,0.1)*cos(Xe(3)-(pi/2)+atan(0.46/0.1))),...
-                    Xe(1)+0.1*cos(Xe(3)-pi/2)];
-              
-    local_posY = [  Xe(2)+0.1*sin(Xe(3)-(pi/2)),...
-                    Xe(2)-0.1*sin(Xe(3)-(pi/2)),...
-                    Xe(2)+(hypot(0.46,0.1)*sin(Xe(3)+atan(0.1/0.46))),...
-                    Xe(2)+(hypot(0.46,0.1)*sin(Xe(3)-(pi/2)+atan(0.46/0.1))),...
-                    Xe(2)+0.1*sin(Xe(3)-pi/2)];
-    
+    local_posX = [Xe(1)+0.1*cos(Xe(3)-pi/2),Xe(1)-0.1*cos(Xe(3)-pi/2),Xe(1)+(hypot(0.46,0.1)*cos(Xe(3)+atan(0.1/0.46))),Xe(1)+(hypot(0.46,0.1)*cos(Xe(3)-(pi/2)+atan(0.46/0.1))),Xe(1)+0.1*cos(Xe(3)-pi/2)];
+    local_posY = [Xe(2)+0.1*sin(Xe(3)-(pi/2)),Xe(2)-0.1*sin(Xe(3)-(pi/2)),Xe(2)+(hypot(0.46,0.1)*sin(Xe(3)+atan(0.1/0.46))),Xe(2)+(hypot(0.46,0.1)*sin(Xe(3)-(pi/2)+atan(0.46/0.1))),Xe(2)+0.1*sin(Xe(3)-pi/2)];
     position = [local_posX;local_posY];
     rotation = [cos(Xe(3)-pi/2) -1*sin(Xe(3)-pi/2); sin(Xe(3)-pi/2) cos(Xe(3)-pi/2)];
     vehicle_pos = rotation*position;
     vector_pos = rotation*[Xe(1);Xe(2)];
     set(myHandles3.h4,'xdata',local_posX,'ydata',local_posY);
     set(myHandles3.h3,'xdata',mean(local_posX(3:4)),'ydata',mean(local_posY(3:4)),'udata',cos(Xe(3)),'vdata',sin(Xe(3)));
-    %plots ekf
     set(myHandles3.h5a,'xdata',Xe_History(1,1:counter1-1),'ydata',Xe_History(2,1:counter1-1));
-    
     set(myHandles3.h5b,'xdata',Xdr_History(1,1:counter1-1),'ydata',Xdr_History(2,1:counter1-1));
     Xe_History(:,counter1) = Xe;
     Xdr_History(:,counter1) = Xdr;
@@ -495,7 +487,16 @@ end
 return;
 end
 
-function new_state = RunProcessModel(speed, omega, dt, old_state)
+function new_state = RunProcessModel_ekf(omega, dt, old_state)
+        new_state = zeros(1,5);
+		new_state(1) = old_state(5)*cos(old_state(3))*dt + old_state(1); 
+		new_state(2) = old_state(5)*sin(old_state(3))*dt + old_state(2); 
+		new_state(3) = (omega-old_state(4))*dt + old_state(3); 
+        new_state(4) = old_state(4);
+        new_state(5) = old_state(5);
+end
+
+function new_state = RunProcessModel_dr(speed, omega, dt, old_state)
         new_state = zeros(1,4);
 		new_state(1) = speed*cos(old_state(3))*dt + old_state(1); 
 		new_state(2) = speed*sin(old_state(3))*dt + old_state(2); 
