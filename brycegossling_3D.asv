@@ -72,19 +72,19 @@ stdDevSpeed = 0.4;%0.4;%m/s
 std_rangeMeasurement = 0.16;%meters
 std_angleMeasurement = 1.1*pi/180;%radians
 
-P = zeros(3,3) ;
-%P(4,4) = (4*pi/180)^2; 
+P = zeros(4,4) ;
+P(4,4) = (4*pi/180); 
 
-Q = diag( [ (0.005)^2 ,(0.005)^2 , (0.005*pi/180)^2]) ;
+Q = diag( [ (0.005)^2 ,(0.005)^2 , (0.005*pi/180)^2, (0.005*pi/180*(1/600))^2,] ) ;
 P_u = diag([stdDevGyro^2 stdDevSpeed^2]);
-
+% ------ covariance of the noise/uncetainty in the measurements
 R = diag([std_rangeMeasurement*std_rangeMeasurement*4,...
       std_angleMeasurement*std_angleMeasurement*4]);
-Xe = [ 0; 0; pi/2;] ;  
-Xdr = [ 0; 0; pi/2 ] ;  
+Xe = [ 0; 0; pi/2; 0] ;  
+Xdr = [ 0; 0; pi/2; 0] ;  
 
-Xe_History = zeros(3,length(time_imu));
-Xdr_History = zeros(3,length(time_imu));
+Xe_History = zeros(4,length(time_imu));
+Xdr_History = zeros(4,length(time_imu));
   
 %%
 % --------------------------------------
@@ -168,8 +168,6 @@ scan = ExtractScan(scan_i);
 
 r = ExtractOOI(scan.ranges, scan.intensity, MyGUIHandles);
 OOI.global = ExtractOOIHR(r);
-% OOI.global.x = -OOI.global.x;
-% OOI.global.y = OOI.global.y+0.46;
 OOI.global.N = length(OOI.global.x);
 %fills ids
 OOI.global.id = zeros(OOI.global.N,1);
@@ -179,20 +177,10 @@ end
 
 
 OOI.global = Transform(Xe(3), Xe(1), Xe(2), OOI.global.x, OOI.global.y);
-%set(MyGUIHandles.plot2(3),'xdata',OOI.global.x,'ydata', OOI.global.y);
 set(MyGUIHandles.plot2(2),'xdata',OOI.global.x,'ydata', OOI.global.y);
-%[GlobalOOI(1,:),GlobalOOI(2,:)]  = transform_coordinate(GlobalOOI(1,:)',GlobalOOI(2,:)',Xe);
-%set(MyGUIHandles.plot2(6),'xdata',OOI.local.x,'ydata', OOI.local.y);
 
 OOI.local = OOI.global;
-
-    %Xe = [X(1); Y(1); yaw(1)];
-%-------------resets variables
-% yaw = zeros(N_imu,1);
-% X = zeros(N_imu,1);
-% Y = zeros(N_imu,1);
-% yaw(1) = pi/2;
-%j=750;
+        ID = [];
 j=1;
 %%
 for i = 2:N_imu-2             % in this example I skip some of the laser scans.
@@ -241,13 +229,11 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
         set(MyGUIHandles.plot2_title,'string',s);
         
         set(MyGUIHandles.plot2(3),'xdata',OOI.local.x,'ydata', OOI.local.y);
-        ID = [];
+
         ID = AssociateIOO(OOI, MyGUIHandles, j, time_laser(j),Xe);
-        disp(ID.local.id)
         set(MyGUIHandles.plot2(5),'xdata',OOI.kalm.x,'ydata', OOI.kalm.y);
         OOI.local = ExtractOOIHR(r);
         
-        OOI = AssociateIOO(OOI, MyGUIHandles, j, time_laser(j),Xe);
         OOI.kalm.id = zeros(1,length(OOI.local.x));
         OOI.kalm.id = ID.local.id;
         if (isempty(OOI.kalm.x) < 1)
@@ -280,9 +266,7 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
                          [eDY/(eDD^2), -eDX/(eDD^2), -1 ]];
                         z = [OOI.MeasuredRanges - ExpectedRange;
                         wrapToPi(OOI.MeasuredBearings - ExpectedBearing)];
-                        % ------ covariance of the noise/uncetainty in the measurements
-                        R = diag([std_rangeMeasurement*std_rangeMeasurement*4,...
-                              std_angleMeasurement*std_angleMeasurement*4]);
+
                         % Some intermediate steps for the EKF (as presented in the lecture notes)
                         S = R + H*P*H' ;
                         iS = inv(S);%iS=1/S;                 % iS = inv(S) ;   % in this case S is 1x1 so inv(S) is just 1/S
@@ -292,16 +276,16 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
                         %P = P-P*H'*iS*H*P;%P = P-K*H*P ;       % update the Covariance % i.e. "P = P-P*H'*iS*H*P"  )
                         P = P-K*H*P ;
 
-                        fprintf("X before prediction\n")
-                        disp(Xdr')
-                        fprintf("X after prediction\n")
-                        disp(Xe')
-                        fprintf("OOI.local.x\n")
-                        disp(OOI.local.x)
-                        fprintf("OOI.kalman.x\n")
-                        disp(OOI.kalm.x)
-                        fprintf("z\n")
-                        disp(z)
+%                         fprintf("X before prediction\n")
+%                         disp(Xdr')
+%                         fprintf("X after prediction\n")
+%                         disp(Xe')
+%                         fprintf("OOI.local.x\n")
+%                         disp(OOI.local.x)
+%                         fprintf("OOI.kalman.x\n")
+%                         disp(OOI.kalm.x)
+%                         fprintf("z\n")
+%                         disp(z)
                     else
                         [smallest id] = min(OOI.kalm.id);
                         if (smallest == 0)
@@ -351,9 +335,9 @@ function OOI = AssociateIOO(OOI, H, t,q, Xe)
         assignin('base','dist', dist);
         if dist_min < 0.5
             OOI.local.id(i) = id;
-            set(H.labels(i),...
-            'position',[OOI.local.x(i)-1,OOI.local.y(i)-0.5],...
-            'String',['id: #',num2str(id),', Error: ', num2str(dist_min), ' m']);
+%             set(H.labels(i),...
+%             'position',[OOI.local.x(i)-1,OOI.local.y(i)-0.5],...
+%             'String',['id: #',num2str(id),', Error: ', num2str(dist_min), ' m']);
         else
             set(H.labels(i),...
             'position',[0,0],...
