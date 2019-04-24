@@ -247,6 +247,7 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
         set(MyGUIHandles.plot2(5),'xdata',OOI.kalm.x,'ydata', OOI.kalm.y);
         OOI.local = ExtractOOIHR(r);
         
+        OOI = AssociateIOO(OOI, MyGUIHandles, j, time_laser(j),Xe);
         OOI.kalm.id = zeros(1,length(OOI.local.x));
         OOI.kalm.id = ID.local.id;
         if (isempty(OOI.kalm.x) < 1)
