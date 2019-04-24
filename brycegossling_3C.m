@@ -251,7 +251,7 @@ for i = 2:N_imu-2             % in this example I skip some of the laser scans.
         %OOI = AssociateIOO(OOI, MyGUIHandles, j, time_laser(j),Xe);
         OOI.kalm.id = zeros(1,length(OOI.local.x));
         OOI.kalm.id = ID.local.id;
-        if (isempty(OOI.local.x) < 1)
+        if (isempty(OOI.kalm.x) < 1)
             point=zeros(1,length(OOI.global.x));
             for num2 = 1:length(OOI.local.x)
                 for num1 = 1:length(OOI.global.x)
